@@ -13,7 +13,7 @@ public class DriveDAOImpl implements DriveDAO {
      */
     private Map<Long, Drive> drives;
 
-    DriveDAOImpl() {
+    public DriveDAOImpl() {
         drives = new ConcurrentHashMap<>();
     }
 

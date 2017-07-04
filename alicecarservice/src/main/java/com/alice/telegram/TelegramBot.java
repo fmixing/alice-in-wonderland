@@ -17,7 +17,6 @@ import org.telegram.telegrambots.bots.commandbot.TelegramLongPollingCommandBot;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.exceptions.TelegramApiException;
 
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
@@ -87,8 +86,6 @@ public class TelegramBot extends TelegramLongPollingBot
                             Integer.parseInt(parsedMessage.get(5)),Integer.parseInt(parsedMessage.get(6)));
                     long date = calendar.getTime().getTime();
                     int vacantPlaces = Integer.parseInt(parsedMessage.get(7));
-
-
                     Drive drive = driveService.addDrive(userID, from, to, date, vacantPlaces);
                     text = "You've tried to create a drive with ID = " + drive.getUserID();
                     response.setText(text);

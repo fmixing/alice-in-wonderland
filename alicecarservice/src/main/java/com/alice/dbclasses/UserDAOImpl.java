@@ -13,7 +13,7 @@ public class UserDAOImpl implements UserDAO{
      */
     private Map<Long, User> users;
 
-    UserDAOImpl() {
+    public UserDAOImpl() {
         users = new ConcurrentHashMap<>();
     }
 

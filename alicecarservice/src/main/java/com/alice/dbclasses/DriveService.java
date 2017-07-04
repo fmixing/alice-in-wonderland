@@ -19,8 +19,14 @@ public class DriveService {
     @Autowired
     private UserDAO userDAO;
 
+    /**
+     * Creates a new unique drive ID
+     */
     private AtomicLong id = new AtomicLong(0);
 
+    /**
+     * @return created object Drive which has been put to DB
+     */
     public Drive addDrive(long userID, long from, long to, long date, int vacantPlaces) {
         long driveID = id.incrementAndGet();
         Drive drive = new Drive(driveID, userID, from, to, date, vacantPlaces);
@@ -32,6 +38,11 @@ public class DriveService {
         return drive;
     }
 
+    /**
+     * @param driveID a drive to which a user wants to join
+     * @param userID user ID
+     * @return a Drive to which the user joined
+     */
     public Drive joinDrive(long driveID, long userID) {
         Drive drive = driveDAO.getDriveByID(driveID).cloneDrive();
         User user = userDAO.getUserByID(userID).cloneUser();

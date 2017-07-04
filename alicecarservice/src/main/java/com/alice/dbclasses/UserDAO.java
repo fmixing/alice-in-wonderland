@@ -4,9 +4,9 @@ import java.util.List;
 
 public interface UserDAO {
 
-    public User getUserByID(long ID);
+    User getUserByID(long ID);
 
-    public User putUser(User user);
+    User putUser(User user);
 
-    public List<User> getUsers();
+    List<User> getUsers();
 }

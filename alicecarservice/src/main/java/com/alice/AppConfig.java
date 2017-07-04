@@ -3,6 +3,8 @@ package com.alice;
 
 import javax.sql.DataSource;
 
+import com.alice.dbclasses.UserDAO;
+import com.alice.dbclasses.UserDAOImpl;
 import liquibase.integration.spring.SpringLiquibase;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceBuilder;
 import org.springframework.boot.autoconfigure.liquibase.LiquibaseProperties;
@@ -23,6 +25,11 @@ public class AppConfig
         return DataSourceBuilder.create().build();
     }
 
+
+    @Bean
+    public UserDAO userDAO() {
+        return new UserDAOImpl();
+    }
 
     @Bean
     public LiquibaseProperties liquibaseProperties()
