@@ -1,10 +1,7 @@
 package com.alice.telegram;
 
 
-import com.alice.dbclasses.Drive;
-import com.alice.dbclasses.DriveService;
-import com.alice.dbclasses.User;
-import com.alice.dbclasses.UserService;
+import com.alice.dbclasses.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,6 +37,9 @@ public class TelegramBot extends TelegramLongPollingBot
 
     @Autowired
     private DriveService driveService;
+
+    @Autowired
+    private Cities cities;
 
     @Override
     public String getBotToken()
@@ -80,8 +80,11 @@ public class TelegramBot extends TelegramLongPollingBot
                 }
                 else {
                     long userID = Long.parseLong(parsedMessage.get(1));
-                    long from = Long.parseLong(parsedMessage.get(2));
-                    long to = Long.parseLong(parsedMessage.get(3));
+                    long from = cities.getCityID(parsedMessage.get(2));
+                    long to = cities.getCityID(parsedMessage.get(3));
+                    if (from == -1 || to == -1) {
+                        text = "Wrong name of city. To check the names send \"/cities\"";
+                    }
                     Calendar calendar = new GregorianCalendar(Integer.parseInt(parsedMessage.get(4)),
                             Integer.parseInt(parsedMessage.get(5)),Integer.parseInt(parsedMessage.get(6)));
                     long date = calendar.getTime().getTime();
@@ -127,6 +130,37 @@ public class TelegramBot extends TelegramLongPollingBot
                     response.setText(text);
                 }
 
+                try {
+                    sendMessage(response);
+                    logger.info("Sent message \"{}\" to {}", text, chatId);
+                } catch (TelegramApiException e) {
+                    logger.error("Failed to send message \"{}\" to {} due to error: {}", text, chatId, e.getMessage());
+                }
+            }
+            else if (message.getText().startsWith("/help")) {
+                SendMessage response = new SendMessage();
+                Long chatId = message.getChatId();
+                response.setChatId(chatId);
+                String text = "To create a user send \"/create login password\".\nTo add a drive to your user send \"/add_drive yourID from_str to_str date:(yyyy mm dd) vacantPlaces\"."
+                        + "\nTo get names of the cities that exist now send \"/cities\"";
+                response.setText(text);
+                try {
+                    sendMessage(response);
+                    logger.info("Sent message \"{}\" to {}", text, chatId);
+                } catch (TelegramApiException e) {
+                    logger.error("Failed to send message \"{}\" to {} due to error: {}", text, chatId, e.getMessage());
+                }
+            }
+            else if (message.getText().startsWith("/cities")) {
+                SendMessage response = new SendMessage();
+                Long chatId = message.getChatId();
+                response.setChatId(chatId);
+                StringBuilder names = new StringBuilder();
+                for (String s : cities.getCitiesNames()) {
+                    names.append(s).append("\n");
+                }
+                String text = names.toString();
+                response.setText(text);
                 try {
                     sendMessage(response);
                     logger.info("Sent message \"{}\" to {}", text, chatId);
