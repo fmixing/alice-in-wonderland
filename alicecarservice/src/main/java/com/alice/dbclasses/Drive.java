@@ -7,6 +7,11 @@ import java.util.Set;
 public class Drive implements Serializable {
 
     /**
+     * Drive's ID
+     */
+    private long driveID;
+
+    /**
      * Who posted a drive
      */
     private long userID;
@@ -33,23 +38,17 @@ public class Drive implements Serializable {
     private int vacantPlaces;
 
     /**
-     * Count of current joined users
-     */
-    private int usersNumber;
-
-    /**
      * Set of joined users IDs
      */
-    private Set<Long> joinedUsers;
+    private final Set<Long> joinedUsers;
 
-
-    Drive(long userID, long from, long to, long date, int vacantPlaces) {
+    Drive(long driveID, long userID, long from, long to, long date, int vacantPlaces) {
+        this.driveID = driveID;
         this.userID = userID;
         this.from = from;
         this.to = to;
         this.date = date;
         this.vacantPlaces = vacantPlaces;
-        usersNumber = 0;
         joinedUsers = new HashSet<>();
 
     }
@@ -59,16 +58,32 @@ public class Drive implements Serializable {
      * @return true if the attempt was successful
      */
     public boolean addUser(long joinedUserID) {
-        synchronized (this) {
-            if (!(usersNumber < vacantPlaces)) {
+        synchronized (joinedUsers) {
+            if (!(joinedUsers.size() < vacantPlaces)) {
                 return false;
             }
             if (!joinedUsers.add(joinedUserID)){
                 return false;
             }
-            usersNumber++;
         }
         return true;
+    }
+
+    /**
+     * @return a copy of the current drive
+     */
+    public Drive cloneDrive() {
+        Drive drive = new Drive(this.driveID, this.userID, this.from, this.to, this.date, this.vacantPlaces);
+        synchronized (joinedUsers) {
+            for (Long userID : joinedUsers) {
+                drive.addUser(userID);
+            }
+        }
+        return drive;
+    }
+
+    public long getDriveID() {
+        return driveID;
     }
 
     public long getUserID() {
@@ -92,7 +107,7 @@ public class Drive implements Serializable {
     }
 
     public int getUsersNumber() {
-        return usersNumber;
+        return joinedUsers.size();
     }
 
     public Set<Long> getJoinedUsers() {

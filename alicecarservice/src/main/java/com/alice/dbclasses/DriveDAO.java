@@ -1,12 +1,14 @@
 package com.alice.dbclasses;
 
 import java.util.List;
+import java.util.Set;
 
 public interface DriveDAO {
 
-    public Drive getDriveByID(int ID);
+    public Drive getDriveByID(long ID);
 
-    public boolean putDrive(int ID, Drive drive);
+    public Drive putDrive(Drive drive);
 
-    public List<Drive> getDrivesByFromToDate(long from, long to, long date);
+    public List<Drive> getDrives();
+
 }

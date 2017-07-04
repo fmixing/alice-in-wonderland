@@ -1,6 +1,7 @@
 package com.alice.dbclasses;
 
 import java.io.Serializable;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -14,40 +15,50 @@ public class User implements Serializable {
     /**
      * Drives which have been posted by this user
      */
-    private Set<Long> postedDrives;
+    private final Set<Long> postedDrives;
 
     /**
      * Drives to which this user joined
      */
-    private Set<Long> joinedDrives;
+    private final Set<Long> joinedDrives;
 
 
     User(long userID) {
         this.userID = userID;
-        postedDrives = new HashSet<>();
-        joinedDrives = new HashSet<>();
+        postedDrives = Collections.synchronizedSet(new HashSet<>());
+        joinedDrives = Collections.synchronizedSet(new HashSet<>());
+    }
+
+    /**
+     * @return a copy of the current user
+     */
+    User cloneUser() {
+        User user = new User(this.userID);
+        synchronized (postedDrives) {
+            for (Long ID : postedDrives) {
+                user.addPostedDrive(ID);
+            }
+        }
+        synchronized (joinedDrives) {
+            for (Long ID : joinedDrives) {
+                user.addJoinedDrive(ID);
+            }
+        }
+        return user;
     }
 
     /**
      * @return true if adding to {@code postedDrives} was successful
      */
     public boolean addPostedDrive(long driveID) {
-        synchronized (postedDrives) {
-            if (!postedDrives.add(driveID))
-                return false;
-        }
-        return true;
+        return postedDrives.add(driveID);
     }
 
     /**
      * @return true if adding to {@code joinedDrives} was successful
      */
     public boolean addJoinedDrive(long driveID) {
-        synchronized (joinedDrives) {
-            if (!joinedDrives.add(driveID))
-                return false;
-        }
-        return true;
+        return joinedDrives.add(driveID);
     }
 
     public long getUserID() {

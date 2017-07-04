@@ -1,8 +1,12 @@
 package com.alice.dbclasses;
 
+import java.util.List;
+
 public interface UserDAO {
 
-    public User getUserByID(int ID);
+    public User getUserByID(long ID);
 
-    public boolean putUser(int ID, User user);
+    public User putUser(User user);
+
+    public List<User> getUsers();
 }
