@@ -1,3 +1,5 @@
 com/alice/App.class
+com/alice/dbclasses/DriveInfo.class
+com/alice/dbclasses/UserInfo.class
 com/alice/telegram/TelegramBot.class
 com/alice/AppConfig.class
