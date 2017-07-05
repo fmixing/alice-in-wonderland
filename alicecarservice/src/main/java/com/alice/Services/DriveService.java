@@ -63,8 +63,11 @@ public class DriveService {
         if (drive == null || user == null)
             return null;
 
+        if (!drive.addUser(userID)) {
+            return null;
+        }
+
         user.addJoinedDrive(driveID);
-        drive.addUser(userID);
 
         userDAO.putUser(user);
         return driveDAO.putDrive(drive);

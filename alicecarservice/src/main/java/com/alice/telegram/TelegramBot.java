@@ -5,6 +5,7 @@ import com.alice.Services.CitiesService;
 import com.alice.Services.DriveService;
 import com.alice.Services.UserService;
 import com.alice.dbclasses.drive.Drive;
+import com.alice.dbclasses.drive.DriveView;
 import com.alice.dbclasses.user.User;
 import liquibase.util.StringUtils;
 import org.slf4j.Logger;
@@ -95,6 +96,43 @@ public class TelegramBot extends TelegramLongPollingBot
         return text;
     }
 
+    private String getJoinDrive(Message message) {
+        String[] strings = message.getText().split(" ");
+        String text;
+        List<String> parsedMessage = new ArrayList<>();
+
+        for (String s : strings) {
+            parsedMessage.add(s.trim());
+        }
+
+        if (parsedMessage.size() != 3) {
+            text = "Wrong amount of command args";
+        }
+        else if (!parsedMessage.get(1).matches("[0-9]+")) {
+            text = "Drive ID should contain only digits";
+        }
+        else if (!parsedMessage.get(2).matches("[0-9]+")) {
+            text = "User ID should contain only digits";
+        }
+        else if (driveService.getDrive(Long.parseLong(parsedMessage.get(1))) == null) {
+            text = "Drive with this ID doesn't exist";
+        }
+        else if (userService.getUser(Long.parseLong(parsedMessage.get(2))) == null) {
+            text = "User with this ID doesn't exist";
+        }
+        else {
+            long driveID = Long.parseLong(parsedMessage.get(1));
+            long userID = Long.parseLong(parsedMessage.get(2));
+            Drive drive = driveService.joinDrive(driveID, userID);
+            if (drive == null)
+                text = "Couldn't join to a drive";
+            else {
+                text = "Successful!";
+            }
+        }
+        return text;
+    }
+
     private String getCreate(Message message) {
         String[] strings = message.getText().split(" ");
         String text;
@@ -118,9 +156,22 @@ public class TelegramBot extends TelegramLongPollingBot
         return text;
     }
 
+    private String getAllDrives(Message message) {
+        StringBuilder drives = new StringBuilder();
+        for (DriveView drive : driveService.getAllDrives()) {
+            drives.append("driveID: ").append(drive.getDriveID())
+                    .append(" from: ").append(cities.getCityName(drive.getFrom()).get())
+                    .append(" to: ").append(cities.getCityName(drive.getTo()).get())
+                    .append(" vacant places: ").append(drive.getVacantPlaces())
+                    .append(" filled places: ").append(drive.getJoinedUsers().size()).append("\n");
+        }
+        return drives.toString();
+    }
+
     private String getHelp(Message message) {
         return "To create a user send \"/create login password\".\nTo add a drive to your user send \"/add_drive yourID from_str to_str date:(yyyy mm dd) vacantPlaces\"."
-                + "\nTo get names of the cities that exist now send \"/cities\"";
+                + "\nTo get names of the cities that exist now send \"/cities\"" + "\nTo get all drives info send \"/get_all_drives\""
+                + "\nTo join to a drive send \"/join_drive driveID userID\"";
     }
 
     private String getCities(Message message) {
@@ -158,8 +209,16 @@ public class TelegramBot extends TelegramLongPollingBot
                 text = getCities(message);
                 response.setText(text);
             }
+            else if (message.getText().startsWith("/get_all_drives")) {
+                text = getAllDrives(message);
+                response.setText(text);
+            }
+            else if (message.getText().startsWith("/join_drive")) {
+                text = getJoinDrive(message);
+                response.setText(text);
+            }
             else {
-                text = message.getText();
+                text = "Unknown command, please use \"/help\" to see command list";
                 response.setText(text);
             }
 
@@ -173,5 +232,8 @@ public class TelegramBot extends TelegramLongPollingBot
             }
         }
     }
+
+
+
 
 }

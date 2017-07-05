@@ -75,10 +75,13 @@ public class DriveServiceTest {
 
         driveService.addDrive(1, 1, 2, date,3);
         for (int i = 0; i < 3; i++) {
-            driveService.joinDrive(1, i);
+            driveService.joinDrive(1, i + 1);
         }
-        Drive drive = driveService.joinDrive(1, 3);
-        assertNotEquals("This user should not have been added to drive",null, drive);
+
+
+        Drive drive = driveService.joinDrive(1, 4);
+        assertEquals("This user should not have been added to drive",null, drive);
+        assertEquals(0, userService.getUser(4).getJoinedDrives().size());
     }
 
     @Test
