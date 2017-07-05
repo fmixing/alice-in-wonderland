@@ -1,16 +1,16 @@
-package com.alice.dbclasses;
+package com.alice.dbclasses.user;
 
 import java.io.Serializable;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
-public class User implements Serializable {
+public class User implements Serializable, UserView {
 
     /**
      * Users ID
      */
-    private long userID;
+    private final long userID;
 
     /**
      * Drives which have been posted by this user
@@ -23,7 +23,7 @@ public class User implements Serializable {
     private final Set<Long> joinedDrives;
 
 
-    User(long userID) {
+    public User(long userID) {
         this.userID = userID;
         postedDrives = Collections.synchronizedSet(new HashSet<>());
         joinedDrives = Collections.synchronizedSet(new HashSet<>());
@@ -32,17 +32,13 @@ public class User implements Serializable {
     /**
      * @return a copy of the current user
      */
-    User cloneUser() {
+    public User cloneUser() {
         User user = new User(this.userID);
-        synchronized (postedDrives) {
-            for (Long ID : postedDrives) {
-                user.addPostedDrive(ID);
-            }
+        for (Long ID : postedDrives) {
+            user.addPostedDrive(ID);
         }
-        synchronized (joinedDrives) {
-            for (Long ID : joinedDrives) {
-                user.addJoinedDrive(ID);
-            }
+        for (Long ID : joinedDrives) {
+            user.addJoinedDrive(ID);
         }
         return user;
     }
@@ -61,15 +57,18 @@ public class User implements Serializable {
         return joinedDrives.add(driveID);
     }
 
+    @Override
     public long getUserID() {
         return userID;
     }
 
+    @Override
     public Set<Long> getJoinedDrives() {
-        return joinedDrives;
+        return Collections.unmodifiableSet(joinedDrives);
     }
 
+    @Override
     public Set<Long> getPostedDrives() {
-        return postedDrives;
+        return Collections.unmodifiableSet(postedDrives);
     }
 }

@@ -1,4 +1,4 @@
-package com.alice.dbclasses;
+package com.alice.dbclasses.user;
 
 import org.springframework.stereotype.Component;
 
@@ -11,7 +11,7 @@ public class UserDAOImpl implements UserDAO{
     /**
      * Maps users IDs to {@code User}
      */
-    private Map<Long, User> users;
+    private final Map<Long, User> users;
 
     public UserDAOImpl() {
         users = new ConcurrentHashMap<>();
@@ -19,28 +19,29 @@ public class UserDAOImpl implements UserDAO{
 
     /**
      * @param ID user's ID
-     * @return a User object if the user with this ID exists, null otherwise
+     * @return an {@code Optional} object which contains cloned {@code User} if a user with this ID exists,
+     * an empty Optional otherwise
      */
     @Override
-    public User getUserByID(long ID) {
-        return users.get(ID);
+    public Optional<User> getUserByID(long ID) {
+        return Optional.ofNullable(users.get(ID)).map(User::cloneUser);
     }
 
     /**
      * @param user which is needed to be in DB
-     * @return a User object which now contains in DB
+     * @return a User object which copy now contains in DB
      */
     @Override
     public User putUser(User user) {
-        users.put(user.getUserID(), user);
+        users.put(user.getUserID(), user.cloneUser());
         return user;
     }
 
     /**
-     * @return a list of all created users
+     * @return a list of previews of all created users
      */
     @Override
-    public List<User> getUsers() {
+    public List<UserView> getUsers() {
         return new ArrayList<>(users.values());
     }
 }

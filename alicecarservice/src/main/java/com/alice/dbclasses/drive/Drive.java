@@ -1,48 +1,49 @@
-package com.alice.dbclasses;
+package com.alice.dbclasses.drive;
 
 import java.io.Serializable;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
-public class Drive implements Serializable {
+public class Drive implements Serializable, DriveView {
 
     /**
      * Drive's ID
      */
-    private long driveID;
+    private final long driveID;
 
     /**
      * Who posted a drive
      */
-    private long userID;
+    private final long userID;
 
     /**
      * Starting point
      */
-    private long from;
+    private final long from;
 
     /**
      * Destination point
      */
-    private long to;
+    private final long to;
 
     /**
      * Date of drive
      */
-    private long date;
+    private final long date;
 
     /**
      * Count of vacant place
      */
 
-    private int vacantPlaces;
+    private final int vacantPlaces;
 
     /**
      * Set of joined users IDs
      */
     private final Set<Long> joinedUsers;
 
-    Drive(long driveID, long userID, long from, long to, long date, int vacantPlaces) {
+    public Drive(long driveID, long userID, long from, long to, long date, int vacantPlaces) {
         this.driveID = driveID;
         this.userID = userID;
         this.from = from;
@@ -55,18 +56,11 @@ public class Drive implements Serializable {
 
     /**
      * Adds a user to a drive
+     *
      * @return true if the attempt was successful
      */
     public boolean addUser(long joinedUserID) {
-        synchronized (joinedUsers) {
-            if (!(joinedUsers.size() < vacantPlaces)) {
-                return false;
-            }
-            if (!joinedUsers.add(joinedUserID)){
-                return false;
-            }
-        }
-        return true;
+        return (joinedUsers.size() < vacantPlaces) && joinedUsers.add(joinedUserID);
     }
 
     /**
@@ -74,44 +68,50 @@ public class Drive implements Serializable {
      */
     public Drive cloneDrive() {
         Drive drive = new Drive(this.driveID, this.userID, this.from, this.to, this.date, this.vacantPlaces);
-        synchronized (joinedUsers) {
-            for (Long userID : joinedUsers) {
-                drive.addUser(userID);
-            }
+        for (Long userID : joinedUsers) {
+            drive.addUser(userID);
         }
         return drive;
     }
 
+    @Override
     public long getDriveID() {
         return driveID;
     }
 
+    @Override
     public long getUserID() {
         return userID;
     }
 
+    @Override
     public long getDate() {
         return date;
     }
 
+    @Override
     public long getFrom() {
         return from;
     }
 
+    @Override
     public long getTo() {
         return to;
     }
 
+    @Override
     public int getVacantPlaces() {
         return vacantPlaces;
     }
 
+    @Override
     public int getUsersNumber() {
         return joinedUsers.size();
     }
 
+    @Override
     public Set<Long> getJoinedUsers() {
-        return joinedUsers;
+        return Collections.unmodifiableSet(joinedUsers);
     }
 
 }

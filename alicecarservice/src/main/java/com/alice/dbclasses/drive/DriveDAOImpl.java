@@ -1,4 +1,4 @@
-package com.alice.dbclasses;
+package com.alice.dbclasses.drive;
 
 import org.springframework.stereotype.Component;
 
@@ -11,7 +11,7 @@ public class DriveDAOImpl implements DriveDAO {
     /**
      * Maps drives IDs to {@code Drive}
      */
-    private Map<Long, Drive> drives;
+    private final Map<Long, Drive> drives;
 
     public DriveDAOImpl() {
         drives = new ConcurrentHashMap<>();
@@ -19,28 +19,29 @@ public class DriveDAOImpl implements DriveDAO {
 
     /**
      * @param ID drive's ID
-     * @return a Drive object if the drive with this ID exists, null otherwise
+     * @return an {@code Optional} object which contains cloned {@code Drive} if a drive with this ID exists,
+     * an empty Optional otherwise
      */
     @Override
-    public Drive getDriveByID(long ID) {
-        return drives.get(ID);
+    public Optional<Drive> getDriveByID(long ID) {
+        return Optional.ofNullable(drives.get(ID)).map(Drive::cloneDrive);
     }
 
     /**
      * @param drive which is needed to be in DB
-     * @return a Drive object which now contains in DB
+     * @return a Drive object which copy now contains in DB
      */
     @Override
     public Drive putDrive(Drive drive) {
-        drives.put(drive.getDriveID(), drive);
+        drives.put(drive.getDriveID(), drive.cloneDrive());
         return drive;
     }
 
     /**
-     * @return a list of all created drives
+     * @return a list of previews of all created drives
      */
     @Override
-    public List<Drive> getDrives() {
+    public List<DriveView> getDrives() {
         return new ArrayList<>(drives.values());
     }
 
