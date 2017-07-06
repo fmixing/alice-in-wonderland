@@ -31,6 +31,7 @@ public class DriveService {
     /**
      * Creates a new unique drive ID
      */
+    // скорее всего этот кусочек лучше перенести на уровень ниже -- в DAO
     private AtomicLong id = new AtomicLong(0);
 
     /**
@@ -57,6 +58,7 @@ public class DriveService {
      * @return a Drive to which the user joined, null if a user with this ID doesn't exist
      */
     public Drive joinDrive(long driveID, long userID) {
+        // тут неправильное использование семантики Optional, обсудим при личной беседе
         Drive drive = driveDAO.getDriveByID(driveID).orElse(null);
         User user = userDAO.getUserByID(userID).orElse(null);
 

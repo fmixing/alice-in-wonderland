@@ -6,8 +6,6 @@ import com.alice.dbclasses.user.User;
 import com.alice.dbclasses.user.UserDAO;
 import com.alice.dbclasses.user.UserDAOImpl;
 import com.alice.dbclasses.user.UserView;
-import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.util.List;
@@ -45,6 +43,8 @@ public class UserServiceTest {
         assertNotEquals("User with this ID should already exist", null, get_user_id1);
         assertEquals("User with this ID should not exist", null, get_user_id2);
         assertNotEquals("Got user should not have the same hashcode", user.hashCode(), get_user_id1.hashCode());
+        // делает то же самое, что и строка выше
+        assertNotSame(user, get_user_id1);
     }
 
     @Test

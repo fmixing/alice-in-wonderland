@@ -51,6 +51,9 @@ public class DriveServiceTest {
 
     @Test
     public void testAddingToWrongUser() {
+        // addDrive должен возвращать что-то типа AddDriveResult-a который либо drive либо внятное сообщение об ошибке
+        // по drive == null сложно объяснить юзеру что пошло не так...
+        // мб когда-то придется ввести лимиты на число поездок или что-то такое, сообщения об ошибках должны быть внятными
         Drive drive = driveService.addDrive(2, 1, 2, date,3);
         assertEquals("This drive should not have been created", null, drive);
     }
@@ -78,6 +81,10 @@ public class DriveServiceTest {
             driveService.joinDrive(1, i + 1);
         }
 
+
+        // тоже самое -- надо подумать как именно сообщить пользователю что он не влез а поездку
+        // причин может быть много, и joinDrive должен прозрачно говорить всем своим клиентам что у него там не срослось
+        // и почему все плохо
 
         Drive drive = driveService.joinDrive(1, 4);
         assertEquals("This user should not have been added to drive",null, drive);

@@ -33,8 +33,11 @@ public class CitiesService {
     /**
      * @return List of all cities which are contained in DB
      */
-    public List<String> getCitiesNames() {
-        return new ArrayList<>(cities.keySet());
+    // если вернуть Collection<String> то можно не создавать нового массива
+    // по сути тут порядок не важен
+    public Collection<String> getCitiesNames() {
+        return Collections.unmodifiableCollection(cities.keySet());
+        // return new ArrayList<>(cities.keySet());
     }
 
 

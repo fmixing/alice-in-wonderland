@@ -33,6 +33,8 @@ public class UserDAOImpl implements UserDAO{
      */
     @Override
     public User putUser(User user) {
+        // тут потенциальное NPE
+        Objects.requireNonNull(user);
         users.put(user.getUserID(), user.cloneUser());
         return user;
     }
