@@ -1,13 +1,14 @@
 package com.alice.dbclasses.user;
 
+import com.alice.dao.AbstractDAO;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Component
-public class UserDAOImpl implements UserDAO{
-
+public class UserDAOImpl extends AbstractDAO<UserView, User>
+{
     /**
      * Maps users IDs to {@code User}
      */
@@ -17,33 +18,32 @@ public class UserDAOImpl implements UserDAO{
         users = new ConcurrentHashMap<>();
     }
 
-    /**
-     * @param ID user's ID
-     * @return an {@code Optional} object which contains cloned {@code User} if a user with this ID exists,
-     * an empty Optional otherwise
-     */
     @Override
-    public Optional<User> getUserByID(long ID) {
-        return Optional.ofNullable(users.get(ID)).map(User::cloneUser);
+    public Optional<UserView> getViewByID(long ID)
+    {
+        return Optional.ofNullable(users.get(ID));
     }
 
-    /**
-     * @param user which is needed to be in DB
-     * @return a User object which copy now contains in DB
-     */
+
     @Override
-    public User putUser(User user) {
-        // тут потенциальное NPE
-        Objects.requireNonNull(user);
-        users.put(user.getUserID(), user.cloneUser());
-        return user;
+    public Collection<UserView> getAllViews()
+    {
+        return Collections.unmodifiableCollection(users.values());
     }
 
-    /**
-     * @return a list of previews of all created users
-     */
+
     @Override
-    public List<UserView> getUsers() {
-        return new ArrayList<>(users.values());
+    protected Optional<User> get(long ID)
+    {
+        return Optional.ofNullable(users.get(ID));
+    }
+
+
+    @Override
+    protected UserView put(long ID, User value)
+    {
+        Objects.requireNonNull(value);
+        users.put(value.getUserID(), value);
+        return value;
     }
 }

@@ -4,8 +4,10 @@ import java.io.Serializable;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.locks.ReentrantLock;
 
-public class User implements Serializable, UserView {
+
+public class User extends ReentrantLock implements Serializable, UserView {
 
     /**
      * Users ID
@@ -25,8 +27,8 @@ public class User implements Serializable, UserView {
 
     public User(long userID) {
         this.userID = userID;
-        postedDrives = Collections.synchronizedSet(new HashSet<>());
-        joinedDrives = Collections.synchronizedSet(new HashSet<>());
+        postedDrives = new HashSet<>();
+        joinedDrives = new HashSet<>();
     }
 
     /**

@@ -4,8 +4,10 @@ import java.io.Serializable;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.locks.ReentrantLock;
 
-public class Drive implements Serializable, DriveView {
+
+public class Drive extends ReentrantLock implements Serializable, DriveView {
 
     /**
      * Drive's ID

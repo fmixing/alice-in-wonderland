@@ -1,15 +1,14 @@
 package com.alice.Services;
 
-import com.alice.dbclasses.drive.Drive;
-import com.alice.dbclasses.drive.DriveDAO;
+import com.alice.dao.Result;
+import com.alice.dao.ResultImpl;
+import com.alice.dbclasses.drive.DriveDAOImpl;
 import com.alice.dbclasses.drive.DriveView;
-import com.alice.dbclasses.user.User;
-import com.alice.dbclasses.user.UserDAO;
+import com.alice.dbclasses.user.UserDAOImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-
-import java.util.List;
+import java.util.Collection;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -17,13 +16,12 @@ import java.util.concurrent.atomic.AtomicLong;
 @Component
 public class DriveService {
 
-    private final DriveDAO driveDAO;
+    private final DriveDAOImpl driveDAO;
 
-
-    private final UserDAO userDAO;
+    private final UserDAOImpl userDAO;
 
     @Autowired
-    public DriveService(UserDAO userDAO, DriveDAO driveDAO) {
+    public DriveService(UserDAOImpl userDAO, DriveDAOImpl driveDAO) {
         this.userDAO = userDAO;
         this.driveDAO = driveDAO;
     }
@@ -37,19 +35,13 @@ public class DriveService {
     /**
      * @return created object Drive which has been put to DB
      */
-    public Drive addDrive(long userID, long from, long to, long date, int vacantPlaces) {
-        long driveID = id.incrementAndGet();
-        Drive drive = new Drive(driveID, userID, from, to, date, vacantPlaces);
-        User user = userDAO.getUserByID(userID).orElse(null);
-
-        if (user == null)
-            return null;
-
-        user.addPostedDrive(driveID);
-        userDAO.putUser(user);
-        driveDAO.putDrive(drive);
-
-        return drive;
+    public Result<DriveView> addDrive(long userID, long from, long to, long date, int vacantPlaces) {
+        return userDAO.modifyWithResult(userID, (result, user) -> {
+            DriveView driveView = driveDAO.addDrive(userID, from, to, date, vacantPlaces);
+            user.addPostedDrive(driveView.getDriveID());
+            result.setResult(driveView);
+            return Optional.of(user);
+        });
     }
 
     /**
@@ -57,37 +49,44 @@ public class DriveService {
      * @param userID user ID
      * @return a Drive to which the user joined, null if a user with this ID doesn't exist
      */
-    public Drive joinDrive(long driveID, long userID) {
-        // тут неправильное использование семантики Optional, обсудим при личной беседе
-        Drive drive = driveDAO.getDriveByID(driveID).orElse(null);
-        User user = userDAO.getUserByID(userID).orElse(null);
-
-        if (drive == null || user == null)
-            return null;
-
-        if (!drive.addUser(userID)) {
-            return null;
-        }
-
-        user.addJoinedDrive(driveID);
-
-        userDAO.putUser(user);
-        return driveDAO.putDrive(drive);
+    public Result<DriveView> joinDrive(long driveID, long userID) {
+        // координатор
+        return userDAO.modifyWithResult(userID, (result, user) ->
+        {
+            // плагин
+            driveDAO.modify(userID, drive ->
+            {
+                if (drive.addUser(userID))
+                {
+                    user.addJoinedDrive(driveID);
+                    result.setResult(drive);
+                    return Optional.of(drive);
+                }
+                else
+                {
+                    result.setError("No enough vacant places");
+                    return Optional.empty();
+                }
+            });
+            return Optional.of(user);
+        });
     }
 
     /**
      * @param ID drive ID
      * @return a drive with this ID, null if a drive with this ID doesn't exist
      */
-    public Drive getDrive(long ID) {
-        Optional<Drive> drive = driveDAO.getDriveByID(ID);
-        return drive.orElse(null);
+    public Result<DriveView> getDrive(long ID) {
+        Optional<DriveView> drive = driveDAO.getViewByID(ID);
+        Result<DriveView> driveViewResult = new ResultImpl<>();
+        drive.ifPresent(driveViewResult::setResult);
+        return driveViewResult;
     }
 
     /**
      * @return all the created drives
      */
-    public List<DriveView> getAllDrives() {
-        return driveDAO.getDrives();
+    public Collection<DriveView> getAllDrives() {
+        return driveDAO.getAllViews();
     }
 }
