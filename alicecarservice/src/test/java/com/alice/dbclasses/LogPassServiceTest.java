@@ -1,6 +1,6 @@
 package com.alice.dbclasses;
 
-import com.alice.Services.LogPassService;
+import com.alice.services.LogPassService;
 import org.junit.Test;
 
 import java.util.Optional;

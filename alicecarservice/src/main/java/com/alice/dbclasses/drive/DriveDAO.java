@@ -1,14 +1,20 @@
 package com.alice.dbclasses.drive;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Function;
 
 public interface DriveDAO {
 
-    Optional<Drive> getDriveByID(long ID);
+    Optional<DriveView> getDriveByID(long ID);
 
-    Drive putDrive(Drive drive);
+    Optional<DriveView> modify(long ID, Function<Drive, Optional<Drive>> mapper);
 
-    List<DriveView> getDrives();
+    DriveView createDrive(long userID, long from, long to, long date, int vacantPlaces);
+
+    Collection<DriveView> getDrives();
+
+
 
 }

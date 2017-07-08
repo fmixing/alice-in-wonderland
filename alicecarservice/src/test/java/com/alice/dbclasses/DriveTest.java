@@ -49,21 +49,6 @@ public class DriveTest {
     }
 
     @Test
-    public void testCloningDrive() {
-        for (int i = 0; i < 3; i++) {
-            drive.addUser(i);
-        }
-        Drive clonedDrive = drive.cloneDrive();
-        assertEquals("Wrong driveID", 1, clonedDrive.getDriveID());
-        assertEquals("Wrong userID", 1, clonedDrive.getUserID());
-        assertEquals("Wrong from", 1, clonedDrive.getFrom());
-        assertEquals("Wrong to", 2, clonedDrive.getTo());
-        assertEquals("Wrong date", date, clonedDrive.getDate());
-        assertEquals("Wrong amount of vacant places", 3, clonedDrive.getVacantPlaces());
-        assertEquals("Wrong amount of posted drives", 3, clonedDrive.getUsersNumber());
-    }
-
-    @Test
     public void testJoinedSet() {
         for (int i = 0; i < 3; i++) {
             drive.addUser(i);

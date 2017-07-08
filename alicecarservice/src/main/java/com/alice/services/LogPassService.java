@@ -1,4 +1,4 @@
-package com.alice.Services;
+package com.alice.services;
 
 
 import org.springframework.stereotype.Component;

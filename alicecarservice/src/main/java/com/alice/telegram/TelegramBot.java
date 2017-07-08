@@ -1,13 +1,15 @@
 package com.alice.telegram;
 
 
-import com.alice.Services.CitiesService;
-import com.alice.Services.DriveService;
-import com.alice.Services.UserService;
+import com.alice.dbclasses.user.UserView;
+import com.alice.services.CitiesService;
+import com.alice.services.DriveService;
+import com.alice.services.UserService;
 import com.alice.dbclasses.drive.Drive;
 import com.alice.dbclasses.drive.DriveView;
 import com.alice.dbclasses.user.User;
-import liquibase.util.StringUtils;
+import com.alice.utils.Result;
+import com.sun.org.apache.regexp.internal.RE;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -76,9 +78,6 @@ public class TelegramBot extends TelegramLongPollingBot
         else if (!parsedMessage.get(1).matches("[0-9]+")) {
             text = "User ID should contain only digits";
         }
-        else if (userService.getUser(Long.parseLong(parsedMessage.get(1))) == null) {
-            text = "User with this ID doesn't exist";
-        }
         else if (!cities.getCityID(parsedMessage.get(2)).isPresent() || !cities.getCityID(parsedMessage.get(3)).isPresent()) {
             text = "Wrong name of city. To check the names send \"/cities\"";
         }
@@ -90,8 +89,13 @@ public class TelegramBot extends TelegramLongPollingBot
                     Integer.parseInt(parsedMessage.get(5)),Integer.parseInt(parsedMessage.get(6)));
             long date = calendar.getTime().getTime();
             int vacantPlaces = Integer.parseInt(parsedMessage.get(7));
-            Drive drive = driveService.addDrive(userID, from, to, date, vacantPlaces);
-            text = "You've tried to create a drive with ID = " + drive.getDriveID();
+            Result<DriveView> drive = driveService.addDrive(userID, from, to, date, vacantPlaces);
+            if (!drive.isPresent()) {
+                text = drive.getMessage();
+            }
+            else {
+                text = "You've tried to create a drive with ID = " + drive.getResult().getDriveID();
+            }
         }
         return text;
     }
@@ -114,18 +118,12 @@ public class TelegramBot extends TelegramLongPollingBot
         else if (!parsedMessage.get(2).matches("[0-9]+")) {
             text = "User ID should contain only digits";
         }
-        else if (driveService.getDrive(Long.parseLong(parsedMessage.get(1))) == null) {
-            text = "Drive with this ID doesn't exist";
-        }
-        else if (userService.getUser(Long.parseLong(parsedMessage.get(2))) == null) {
-            text = "User with this ID doesn't exist";
-        }
         else {
             long driveID = Long.parseLong(parsedMessage.get(1));
             long userID = Long.parseLong(parsedMessage.get(2));
-            Drive drive = driveService.joinDrive(driveID, userID);
-            if (drive == null)
-                text = "Couldn't join to a drive";
+            Result<DriveView> drive = driveService.joinDrive(driveID, userID);
+            if (!drive.isPresent())
+                text = drive.getMessage();
             else {
                 text = "Successful!";
             }
@@ -146,11 +144,11 @@ public class TelegramBot extends TelegramLongPollingBot
             text = "Wrong amount of command args";
         }
         else {
-            User user = userService.addUser(parsedMessage.get(1), parsedMessage.get(2));
-            if (user == null) {
-                text = "You've tried to create a user with already existing login";
+            Result<UserView> user = userService.addUser(parsedMessage.get(1), parsedMessage.get(2));
+            if (!user.isPresent()) {
+                text = user.getMessage();
             } else {
-                text = "You've tried to create a user with ID = " + user.getUserID();
+                text = "You've tried to create a user with ID = " + user.getResult().getUserID();
             }
         }
         return text;

@@ -4,9 +4,12 @@ import org.springframework.stereotype.Component;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Function;
 
 @Component
-public class UserDAOImpl implements UserDAO{
+public class UserDAOImpl implements UserDAO {
 
     /**
      * Maps users IDs to {@code User}
@@ -19,29 +22,47 @@ public class UserDAOImpl implements UserDAO{
 
     /**
      * @param ID user's ID
-     * @return an {@code Optional} object which contains cloned {@code User} if a user with this ID exists,
+     * @return an {@code Optional} object which {@code User} if a user with this ID exists,
      * an empty Optional otherwise
      */
     @Override
-    public Optional<User> getUserByID(long ID) {
-        return Optional.ofNullable(users.get(ID)).map(User::cloneUser);
+    public Optional<UserView> getUserByID(long ID) {
+        return Optional.ofNullable(users.get(ID));
     }
 
     /**
-     * @param user which is needed to be in DB
-     * @return a User object which copy now contains in DB
+     * @param ID of the user which is needed to be modified
+     * @param mapper a function that somehow modifies the user
+     * @return a modified user
      */
     @Override
-    public User putUser(User user) {
-        users.put(user.getUserID(), user.cloneUser());
+    public Optional<UserView> modify(long ID, Function<User, Optional<User>> mapper) {
+        return Optional.ofNullable(users.get(ID)).flatMap(user -> {
+            user.lock();
+            try {
+                return mapper.apply(user).map(result -> users.put(ID, result));
+            } finally {
+                user.unlock();
+            }
+        });
+    }
+
+    /**
+     * @param ID new user's ID
+     * @return a preview of created user
+     */
+    @Override
+    public UserView createUser(long ID) {
+        User user = new User(ID);
+        users.put(ID, user);
         return user;
     }
 
     /**
-     * @return a list of previews of all created users
+     * @return a Collection of previews of all created users
      */
     @Override
-    public List<UserView> getUsers() {
-        return new ArrayList<>(users.values());
+    public Collection<UserView> getUsers() {
+        return Collections.unmodifiableCollection(users.values());
     }
 }

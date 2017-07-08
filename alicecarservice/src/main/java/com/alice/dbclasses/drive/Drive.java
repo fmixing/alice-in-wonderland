@@ -4,8 +4,9 @@ import java.io.Serializable;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.locks.ReentrantLock;
 
-public class Drive implements Serializable, DriveView {
+public class Drive extends ReentrantLock implements Serializable, DriveView {
 
     /**
      * Drive's ID
@@ -63,16 +64,6 @@ public class Drive implements Serializable, DriveView {
         return (joinedUsers.size() < vacantPlaces) && joinedUsers.add(joinedUserID);
     }
 
-    /**
-     * @return a copy of the current drive
-     */
-    public Drive cloneDrive() {
-        Drive drive = new Drive(this.driveID, this.userID, this.from, this.to, this.date, this.vacantPlaces);
-        for (Long userID : joinedUsers) {
-            drive.addUser(userID);
-        }
-        return drive;
-    }
 
     @Override
     public long getDriveID() {

@@ -4,8 +4,9 @@ import java.io.Serializable;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.locks.ReentrantLock;
 
-public class User implements Serializable, UserView {
+public class User extends ReentrantLock implements Serializable, UserView {
 
     /**
      * Users ID
@@ -25,22 +26,8 @@ public class User implements Serializable, UserView {
 
     public User(long userID) {
         this.userID = userID;
-        postedDrives = Collections.synchronizedSet(new HashSet<>());
-        joinedDrives = Collections.synchronizedSet(new HashSet<>());
-    }
-
-    /**
-     * @return a copy of the current user
-     */
-    public User cloneUser() {
-        User user = new User(this.userID);
-        for (Long ID : postedDrives) {
-            user.addPostedDrive(ID);
-        }
-        for (Long ID : joinedDrives) {
-            user.addJoinedDrive(ID);
-        }
-        return user;
+        postedDrives = new HashSet<>();
+        joinedDrives = new HashSet<>();
     }
 
     /**

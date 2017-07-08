@@ -1,10 +1,11 @@
 package com.alice.dbclasses;
 
-import com.alice.Services.CitiesService;
+import com.alice.services.CitiesService;
 import org.junit.Test;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static org.junit.Assert.*;
 
@@ -40,7 +41,7 @@ public class CitiesServiceTest {
     @Test
     public void testGettingCitiesNames() {
         List<String> names = citiesService.getCitiesNames();
-        assertEquals("SPb should have been added", "Санкт-Петербург", names.get(0));
-        assertEquals("Msc should have been added", "Москва", names.get(1));
+        long seenCount = Stream.of("Санкт-Петербург", "Москва").filter(names::contains).count();
+        assertEquals("Number of cities",2, seenCount);
     }
 }

@@ -65,20 +65,6 @@ public class UserTest {
     }
 
     @Test
-    public void testCloningUser() {
-        for (int i = 0; i < 10000; i++) {
-            user.addPostedDrive(i);
-        }
-        for (int i = 0; i < 10000; i++) {
-            user.addJoinedDrive(i);
-        }
-        User clonedUser = user.cloneUser();
-        assertEquals("Wrong userID", 1, clonedUser.getUserID());
-        assertEquals("Wrong amount of joined drives",10000, clonedUser.getJoinedDrives().size());
-        assertEquals("Wrong amount of posted drives",10000, clonedUser.getPostedDrives().size());
-    }
-
-    @Test
     public void testJoinedSet() {
         for (int i = 0; i < 10000; i++) {
             user.addJoinedDrive(i);

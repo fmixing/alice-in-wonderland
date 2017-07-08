@@ -1,4 +1,4 @@
-package com.alice.Services;
+package com.alice.services;
 
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
