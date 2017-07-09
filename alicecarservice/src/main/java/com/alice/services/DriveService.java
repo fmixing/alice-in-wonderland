@@ -66,18 +66,16 @@ public class DriveService {
                     return Optional.empty();
                 }
                 user.addJoinedDrive(driveID);
+                result.setResult(drive);
                 return Optional.of(user);
             });
-            if (userView.isPresent()){
-                result.setResult(drive);
-                return Optional.of(drive);
-            }
-            if (!result.hasMessage()) {
+            if (!userView.isPresent()) {
                 result.setMessage("User with ID " + userID + " doesn't exist");
+                return Optional.empty();
             }
-            return Optional.empty();
+            return Optional.of(drive);
         });
-        if (!driveView.isPresent() && !result.hasMessage())
+        if (!driveView.isPresent())
             result.setMessage("Drive with ID " + driveID + " doesn't exist");
         return result;
     }

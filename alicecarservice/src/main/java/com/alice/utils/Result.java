@@ -30,8 +30,10 @@ public class Result<T> {
     }
 
     public void setMessage(String message) {
-        this.message = message;
-        hasMessage = true;
+        if (!hasMessage) {
+            this.message = message;
+            hasMessage = true;
+        }
     }
 
     public boolean isPresent() {
