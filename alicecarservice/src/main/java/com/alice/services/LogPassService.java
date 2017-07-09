@@ -57,7 +57,6 @@ public class LogPassService {
         LoginInfo(String password, long ID) {
             this.ID = ID;
             this.password = password;
-
         }
     }
 }

@@ -29,9 +29,13 @@ public class Result<T> {
         isPresent = true;
     }
 
-    public void setMessage(String message) {
-        this.message = message;
-        hasMessage = true;
+    public void setMessage(String message)
+    {
+        if (!hasMessage)
+        {
+            this.message = message;
+            hasMessage = true;
+        }
     }
 
     public boolean isPresent() {
