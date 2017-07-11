@@ -11,10 +11,10 @@ public interface DriveDAO {
 
     Optional<DriveView> modify(long ID, Function<Drive, Optional<Drive>> mapper);
 
-    DriveView createDrive(long userID, long from, long to, long date, int vacantPlaces);
+    Drive createDrive(long userID, long from, long to, long date, int vacantPlaces);
 
     Collection<DriveView> getDrives();
 
-
+    void putToCache(Drive drive);
 
 }

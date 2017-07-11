@@ -27,9 +27,10 @@ public class DriveServiceTest {
 
     private DriveDAO driveDAO = new DriveDAOImpl();
     private UserDAO userDAO = new UserDAOImpl();
-    private DriveService driveService = new DriveService(userDAO, driveDAO);
+    private UpdateDB updateDB = new UpdateDB();
+    private DriveService driveService = new DriveService(userDAO, driveDAO, updateDB);
     private LogPassService logPassService = new LogPassService();
-    private UserService userService = new UserService(userDAO, logPassService);
+    private UserService userService = new UserService(userDAO, logPassService, updateDB);
 
     private String login = "abc";
     private String password = "123";

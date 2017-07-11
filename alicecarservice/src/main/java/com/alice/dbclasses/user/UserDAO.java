@@ -11,7 +11,9 @@ public interface UserDAO {
 
     Optional<UserView> modify(long ID, Function<User, Optional<User>> mapper);
 
-    UserView createUser(long ID);
+    User createUser(long ID);
 
     Collection<UserView> getUsers();
+
+    void putToCache(User user);
 }

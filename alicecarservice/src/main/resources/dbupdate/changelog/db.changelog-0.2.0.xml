@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                      http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.2.xsd">
+
+    <changeSet logicalFilePath="changelog/db.changelog-0.2.0.xml" author="alice" id="version-0.2.0">
+        <createTable tableName="logpass">
+            <column name="log" type="varchar"/>
+            <column name="pass" type="varchar"/>
+            <column name="id" type="bigint"/>
+        </createTable>
+
+        <addPrimaryKey tableName="logpass" columnNames="log"/>
+
+    </changeSet>
+</databaseChangeLog>

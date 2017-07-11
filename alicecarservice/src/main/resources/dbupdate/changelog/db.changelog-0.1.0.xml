@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                      http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.2.xsd">
+
+    <changeSet logicalFilePath="changelog/db.changelog-0.1.0.xml" author="alice" id="version-0.1.0">
+        <createTable tableName="drives">
+            <column name="id" type="bigint"/>
+            <column name="blob" type="bytea"/>
+        </createTable>
+
+        <addPrimaryKey tableName="drives" columnNames="id"/>
+
+        <createTable tableName="users">
+            <column name="id" type="bigint"/>
+            <column name="blob" type="bytea"/>
+        </createTable>
+
+        <addPrimaryKey tableName="users" columnNames="id"/>
+        <createSequence cycle="false"
+                        incrementBy="1"
+                        sequenceName="users_ids"
+                        startValue="1"/>
+
+        <createSequence cycle="false"
+                        incrementBy="1"
+                        sequenceName="drives_ids"
+                        startValue="1"/>
+
+    </changeSet>
+</databaseChangeLog>

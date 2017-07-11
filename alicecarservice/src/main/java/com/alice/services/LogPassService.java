@@ -1,63 +1,62 @@
 package com.alice.services;
 
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.EmptyResultDataAccessException;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
-import java.util.Map;
+
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
 
 @Component
 public class LogPassService {
 
-    /**
-     * Maps user's login to {@code LoginInfo} which contains user's password and ID
-     */
-    private final Map<String, LoginInfo> loginInfoMap = new ConcurrentHashMap<>();
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     /**
-     * Creates a new unique ID
-     */
-    private AtomicLong id = new AtomicLong(0);
-
-
-    /**
-     * Creates a record about new user's data
+     * Creates a unique ID for user
      * @param login a unique string which is needed to map user login to ID
      * @param password a password string
-     * @return created user's ID, -1 if a user with this login already exists
+     * @return Optional object contains user ID if the user with this data exists,
+     * Optional.empty otherwise
      */
     public Optional<Long> createNewUser(String login, String password) {
-        if (loginInfoMap.putIfAbsent(login, new LoginInfo(password, id.incrementAndGet())) != null)
-            return Optional.empty();
+        Long userID;
+        try {
+            jdbcTemplate.queryForObject("select id from logpass where log like ?", Long.class, login);
+        } catch (EmptyResultDataAccessException e) {
+            userID = jdbcTemplate.queryForObject("select nextval('users_ids')", Long.class);
 
-        return Optional.of(loginInfoMap.get(login).ID);
+            return Optional.ofNullable(userID);
+        }
+
+        return Optional.empty();
+
     }
 
     /**
      * @param login a login string
      * @param password a password string
-     * @return user's ID, -1 if a user with this data doesn't exist
+     * @return Optional object contains user ID if the user with this data exists,
+     * Optional.empty otherwise
      */
+
     public Optional<Long> getUserID(String login, String password) {
-        if (!loginInfoMap.containsKey(login) || !loginInfoMap.get(login).password.equals(password)) {
+        String got_pass;
+        Long got_id;
+        try {
+            got_pass = jdbcTemplate.queryForObject("select pass from logpass where log like ?", String.class, login);
+            got_id = jdbcTemplate.queryForObject("select id from logpass where log like ?", Long.class, login);
+        } catch (EmptyResultDataAccessException e) {
             return Optional.empty();
         }
-        return Optional.of(loginInfoMap.get(login).ID);
-    }
 
-    /**
-     * Class which contains user's password and ID
-     */
-    private static class LoginInfo {
-        private final long ID;
-        private final String password;
-
-        LoginInfo(String password, long ID) {
-            this.ID = ID;
-            this.password = password;
-
+        if (got_pass.equals(password)) {
+            return Optional.empty();
         }
+        return Optional.of(got_id);
     }
+
 }

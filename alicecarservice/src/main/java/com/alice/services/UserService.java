@@ -1,10 +1,12 @@
 package com.alice.services;
 
+import com.alice.dbclasses.UpdateDB;
 import com.alice.dbclasses.user.User;
 import com.alice.dbclasses.user.UserDAO;
 import com.alice.dbclasses.user.UserView;
 import com.alice.utils.Result;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Component;
 
 import java.util.Collection;
@@ -18,17 +20,20 @@ public class UserService {
 
     private final LogPassService logPassService;
 
+    private final UpdateDB updateDB;
+
     @Autowired
-    public UserService(UserDAO userDAO, LogPassService logPassService) {
+    public UserService(UserDAO userDAO, LogPassService logPassService, UpdateDB updateDB) {
         this.userDAO = userDAO;
         this.logPassService = logPassService;
+        this.updateDB = updateDB;
     }
 
     /**
      * @return {@code Result} object contains created user with this personal data,
      * error message if a user with this login already exists
      */
-    public Result<UserView> addUser(String login, String password) {
+    public Result<UserView> addUser(String login, String password) throws DataAccessException {
         Optional<Long> ID = logPassService.createNewUser(login, password);
 
         Result<UserView> result = new Result<>();
@@ -38,7 +43,18 @@ public class UserService {
             return result;
         }
 
-        result.setResult(userDAO.createUser(ID.get()));
+        User user = userDAO.createUser(ID.get());
+
+        try {
+            updateDB.updateUserLogPass(user, ID.get(), login, password);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        result.setResult(user);
+
+        userDAO.putToCache(user);
+
         return result;
     }
 

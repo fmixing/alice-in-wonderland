@@ -19,7 +19,8 @@ public class UserServiceTest {
 
     private UserDAO userDAO = new UserDAOImpl();
     private LogPassService logPassService = new LogPassService();
-    private UserService userService = new UserService(userDAO, logPassService);
+    private UpdateDB updateDB = new UpdateDB();
+    private UserService userService = new UserService(userDAO, logPassService, updateDB);
 
     private String login = "abc";
     private String password = "123";

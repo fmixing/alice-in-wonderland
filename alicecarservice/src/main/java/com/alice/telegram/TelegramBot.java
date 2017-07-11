@@ -166,9 +166,29 @@ public class TelegramBot extends TelegramLongPollingBot
         return drives.toString();
     }
 
+    private String getAllUsers(Message message) {
+        StringBuilder users = new StringBuilder();
+        for (UserView user : userService.getAllUsers()) {
+            users.append("userID: ").append(user.getUserID());
+
+            if (!user.getJoinedDrives().isEmpty()) {
+                users.append(" joined drives: ");
+                user.getJoinedDrives().forEach(v -> users.append(v).append(" "));
+            }
+            if (!user.getPostedDrives().isEmpty()) {
+                users.append(" posted drives: ");
+                user.getPostedDrives().forEach(v -> users.append(v).append(" "));
+            }
+
+            users.append("\n");
+        }
+        return users.toString();
+    }
+
     private String getHelp(Message message) {
         return "To create a user send \"/create login password\".\nTo add a drive to your user send \"/add_drive yourID from_str to_str date:(yyyy mm dd) vacantPlaces\"."
-                + "\nTo get names of the cities that exist now send \"/cities\"" + "\nTo get all drives info send \"/get_all_drives\""
+                + "\nTo get names of the cities that exist now send \"/cities\"" + "\nTo get all drives info send \"/get_all_drives\"" +
+                "\nTo get all users info send \"/get_all_users\""
                 + "\nTo join to a drive send \"/join_drive driveID userID\"";
     }
 
@@ -209,6 +229,10 @@ public class TelegramBot extends TelegramLongPollingBot
             }
             else if (message.getText().startsWith("/get_all_drives")) {
                 text = getAllDrives(message);
+                response.setText(text);
+            }
+            else if (message.getText().startsWith("/get_all_users")) {
+                text = getAllUsers(message);
                 response.setText(text);
             }
             else if (message.getText().startsWith("/join_drive")) {

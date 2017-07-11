@@ -1,5 +1,6 @@
 package com.alice.services;
 
+import com.alice.dbclasses.UpdateDB;
 import com.alice.dbclasses.drive.Drive;
 import com.alice.dbclasses.drive.DriveDAO;
 import com.alice.dbclasses.drive.DriveView;
@@ -8,6 +9,7 @@ import com.alice.dbclasses.user.UserView;
 import com.alice.utils.Result;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 
 import java.util.Collection;
@@ -22,10 +24,14 @@ public class DriveService {
 
     private final UserDAO userDAO;
 
+
+    private final UpdateDB updateDB;
+
     @Autowired
-    public DriveService(UserDAO userDAO, DriveDAO driveDAO) {
+    public DriveService(UserDAO userDAO, DriveDAO driveDAO, UpdateDB updateDB) {
         this.userDAO = userDAO;
         this.driveDAO = driveDAO;
+        this.updateDB = updateDB;
     }
 
     /**
@@ -37,9 +43,20 @@ public class DriveService {
         Result<DriveView> res = new Result<>();
 
         Optional<UserView> userView = userDAO.modify(userID, user -> {
-            DriveView driveView = driveDAO.createDrive(userID, from, to, date, vacantPlaces);
-            user.addPostedDrive(driveView.getDriveID());
-            res.setResult(driveView);
+            // start transaction
+
+            Drive drive = driveDAO.createDrive(userID, from, to, date, vacantPlaces);
+            user.addPostedDrive(drive.getDriveID());
+
+            updateDB.updateUserDrive(user, drive);
+
+            res.setResult(drive);
+
+            driveDAO.putToCache(drive);
+
+         //   userDAO.saveUserToDB(user);
+         //   driveDAO.save..
+            // commit;
             return Optional.of(user);
         });
 
@@ -61,12 +78,22 @@ public class DriveService {
         Result<DriveView> result = new Result<>();
         Optional<DriveView> driveView = driveDAO.modify(driveID, drive -> {
             Optional<UserView> userView = userDAO.modify(userID, user -> {
+                if (drive.getUserID() == userID) {
+                    result.setMessage("User can't join to a drive which has created");
+                    return Optional.empty();
+                }
                 if (!drive.addUser(userID)) {
-                    result.setMessage("Can't join to drive with ID " + driveID + ", all seats are taken");
+                    result.setMessage("Can't join to a drive with ID " + driveID + ", all seats are taken");
                     return Optional.empty();
                 }
                 user.addJoinedDrive(driveID);
+
+                updateDB.updateUserDrive(user, drive);
+
                 result.setResult(drive);
+
+                driveDAO.putToCache(drive);
+
                 return Optional.of(user);
             });
             if (!userView.isPresent()) {
