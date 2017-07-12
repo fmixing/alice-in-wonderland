@@ -43,20 +43,14 @@ public class DriveService {
         Result<DriveView> res = new Result<>();
 
         Optional<UserView> userView = userDAO.modify(userID, user -> {
-            // start transaction
 
-            Drive drive = driveDAO.createDrive(userID, from, to, date, vacantPlaces);
-            user.addPostedDrive(drive.getDriveID());
+            driveDAO.createDrive(userID, from, to, date, vacantPlaces, drive -> {
+                user.addPostedDrive(drive.getDriveID());
+                updateDB.updateUserDrive(user, drive);
+                driveDAO.putToCache(drive);
+                res.setResult(drive);
+            });
 
-            updateDB.updateUserDrive(user, drive);
-
-            res.setResult(drive);
-
-            driveDAO.putToCache(drive);
-
-         //   userDAO.saveUserToDB(user);
-         //   driveDAO.save..
-            // commit;
             return Optional.of(user);
         });
 
@@ -80,6 +74,10 @@ public class DriveService {
             Optional<UserView> userView = userDAO.modify(userID, user -> {
                 if (drive.getUserID() == userID) {
                     result.setMessage("User can't join to a drive which has created");
+                    return Optional.empty();
+                }
+                if (drive.getJoinedUsers().contains(userID)) {
+                    result.setMessage("You have already joined this drive");
                     return Optional.empty();
                 }
                 if (!drive.addUser(userID)) {

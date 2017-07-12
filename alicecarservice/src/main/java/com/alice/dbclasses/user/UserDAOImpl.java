@@ -1,39 +1,58 @@
 package com.alice.dbclasses.user;
 
+import com.alice.AppConfig;
 import com.google.common.base.Throwables;
+import net.sf.ehcache.Cache;
+import net.sf.ehcache.CacheManager;
+import net.sf.ehcache.Element;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+//import org.springframework.cache.CacheManager;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.util.SerializationUtils;
 
-import javax.sql.rowset.serial.SerialJavaObject;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 @Component
 public class UserDAOImpl implements UserDAO {
 
+
     @Autowired
-    JdbcTemplate jdbcTemplate;
+    private CacheManager cacheManager;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    private static final Logger logger = LoggerFactory.getLogger(UserDAOImpl.class);
+
 
     /**
      * Maps users IDs to {@code User}
      */
     private final Map<Long, User> users;
 
+
+    private final Cache usersCache;
+
     public UserDAOImpl() {
         users = new ConcurrentHashMap<>();
+//
+//        ApplicationContext context = new AnnotationConfigApplicationContext(AppConfig.class);
+//        cacheManager = (CacheManager) context.getBean("cacheManager");
+
+
+        cacheManager.addCache("usersCache");
+
+        usersCache = cacheManager.getCache("usersCache");
     }
-
-
-//    @Override
-//    public Optional<UserView> getUserByID(long ID) {
-//        return Optional.ofNullable(users.get(ID));
-//    }
 
     /**
      * @param ID user's ID
@@ -43,7 +62,12 @@ public class UserDAOImpl implements UserDAO {
     @Override
     public Optional<UserView> getUserByID(long ID)
     {
-        return getUser(ID).map(value -> (UserView) value);
+        usersCache.acquireReadLockOnKey(ID);
+        try {
+            return getUser(ID).map(value -> (UserView) value);
+        } finally {
+            usersCache.releaseReadLockOnKey(ID);
+        }
     }
 
     private Optional<User> getUser(long ID) {
@@ -52,9 +76,6 @@ public class UserDAOImpl implements UserDAO {
             user = users.computeIfAbsent(ID, userID ->
                 (User) SerializationUtils.deserialize(jdbcTemplate.queryForObject("select blob from users where id = ?",
                     byte[].class, userID)
-//                    jdbcTemplate.queryForObject("select * from users where id = ?",
-//                            (resultSet, i) -> (User) resultSet.getObject(2),
-//                            userID
                     ));
         } catch (EmptyResultDataAccessException e) {
             return Optional.empty();
@@ -70,19 +91,28 @@ public class UserDAOImpl implements UserDAO {
      */
     @Override
     public Optional<UserView> modify(long ID, Function<User, Optional<User>> mapper) {
+        usersCache.acquireWriteLockOnKey(ID);
         return getUser(ID).flatMap(user -> {
-            user.lock();
+        //    user.lock();
             try {
-                return mapper.apply(user).map(result -> users.put(ID, result));
+                Optional<User> result = mapper.apply(user);
+                if (!result.isPresent())
+                    return Optional.empty();
+                usersCache.put(new Element(ID, result.get()));
+                return Optional.of(result.get());
+//                mapper.apply(user)
+//                         .map(result -> usersCache.put(new Element(ID, result)));
             }
             catch (Exception e)
             {
-                // logger warn
-                users.remove(ID);
+                logger.error("Failed to access database while doing modify on user with ID " + ID);
+//                users.remove(ID);
+                usersCache.remove(ID);
                 throw Throwables.propagate(e);
             }
             finally {
-                user.unlock();
+//                user.unlock();
+                usersCache.releaseWriteLockOnKey(ID);
             }
         });
     }
@@ -92,13 +122,25 @@ public class UserDAOImpl implements UserDAO {
      * @return a preview of created user
      */
     @Override
-    public User createUser(long ID) {
-        return new User(ID);
+    public UserView createUser(long ID, Consumer<User> mapper) {
+        User user = new User(ID);
+
+        try {
+            mapper.accept(user);
+        }
+        catch (Exception e)
+        {
+            logger.error("Failed to access database while creating user with ID " + ID);
+            throw Throwables.propagate(e);
+        }
+
+        return user;
     }
 
     @Override
     public void putToCache(User user) {
-        users.putIfAbsent(user.getUserID(), user);
+       // users.putIfAbsent(user.getUserID(), user);
+        usersCache.putIfAbsent(new Element(user.getUserID(), user));
     }
 
     /**
@@ -112,7 +154,6 @@ public class UserDAOImpl implements UserDAO {
 
         usersByteList.forEach(v -> allUsers.add((User) SerializationUtils.deserialize(v)));
 
-      //  return Collections.unmodifiableCollection(users.values());
         return allUsers;
     }
 

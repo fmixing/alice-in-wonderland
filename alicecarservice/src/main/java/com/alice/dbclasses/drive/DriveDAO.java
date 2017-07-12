@@ -3,6 +3,7 @@ package com.alice.dbclasses.drive;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 public interface DriveDAO {
@@ -11,7 +12,7 @@ public interface DriveDAO {
 
     Optional<DriveView> modify(long ID, Function<Drive, Optional<Drive>> mapper);
 
-    Drive createDrive(long userID, long from, long to, long date, int vacantPlaces);
+    DriveView createDrive(long userID, long from, long to, long date, int vacantPlaces, Consumer<Drive> mapper);
 
     Collection<DriveView> getDrives();
 

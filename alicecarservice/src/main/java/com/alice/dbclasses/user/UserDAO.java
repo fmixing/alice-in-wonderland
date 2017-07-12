@@ -3,6 +3,7 @@ package com.alice.dbclasses.user;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 public interface UserDAO {
@@ -11,7 +12,7 @@ public interface UserDAO {
 
     Optional<UserView> modify(long ID, Function<User, Optional<User>> mapper);
 
-    User createUser(long ID);
+    UserView createUser(long ID, Consumer<User> mapper);
 
     Collection<UserView> getUsers();
 

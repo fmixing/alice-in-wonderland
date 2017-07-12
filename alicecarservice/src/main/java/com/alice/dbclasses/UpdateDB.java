@@ -18,11 +18,6 @@ public class UpdateDB {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
-//    @Autowired
-//    public UpdateDB(JdbcTemplate jdbcTemplate) {
-//        this.jdbcTemplate = jdbcTemplate;
-//    }
-
     /**
      * Writes data to users table and drives table as a transaction
      */
@@ -37,6 +32,8 @@ public class UpdateDB {
 
         jdbcTemplate.update("insert into drives (id, blob) values (?, ?) on conflict(id) do update set blob = excluded.blob",
                 drive.getDriveID(), data);
+
+        jdbcTemplate.update("insert into update_drives (blob) values (?)", data);
     }
 
 
@@ -45,13 +42,14 @@ public class UpdateDB {
      * @param ID is unique because it was given by users_ids sequence in {@code LogPassService}
      */
     @Transactional
-    public void updateUserLogPass(User user, Long ID, String login, String password) throws Exception{
+    public void updateUserLogPass(User user, Long ID, String login, String password) {
         byte[] data = SerializationUtils.serialize(user);
-
-   //     System.err.println(TransactionSynchronizationManager.isActualTransactionActive());
 
         jdbcTemplate.update("insert into logpass (log, pass, id) values (?, ?, ?)",
                 login, password, ID);
+
+//        if (true)
+//            throw new RuntimeException();
 
         jdbcTemplate.update("insert into users (id, blob) values (?, ?)",
                 ID, data);

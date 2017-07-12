@@ -22,7 +22,7 @@ public class LogPassService {
      * @return Optional object contains user ID if the user with this data exists,
      * Optional.empty otherwise
      */
-    public Optional<Long> createNewUser(String login, String password) {
+    public Optional<Long> getIDForUser(String login, String password) {
         Long userID;
         try {
             jdbcTemplate.queryForObject("select id from logpass where log like ?", Long.class, login);
@@ -42,7 +42,6 @@ public class LogPassService {
      * @return Optional object contains user ID if the user with this data exists,
      * Optional.empty otherwise
      */
-
     public Optional<Long> getUserID(String login, String password) {
         String got_pass;
         Long got_id;
@@ -53,7 +52,7 @@ public class LogPassService {
             return Optional.empty();
         }
 
-        if (got_pass.equals(password)) {
+        if (!got_pass.equals(password)) {
             return Optional.empty();
         }
         return Optional.of(got_id);

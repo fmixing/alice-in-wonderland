@@ -1,18 +1,15 @@
 package com.alice.dbclasses.drive;
 
-import java.sql.Array;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 import jersey.repackaged.com.google.common.base.Throwables;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.SerializationUtils;
 
 import java.util.*;
@@ -23,6 +20,9 @@ public class DriveDAOImpl implements DriveDAO {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    private static final Logger logger = LoggerFactory.getLogger(DriveDAOImpl.class);
+
 
     /**
      * Maps drives IDs to {@code Drive}
@@ -35,13 +35,24 @@ public class DriveDAOImpl implements DriveDAO {
 
 
     /**
-     * @return a preview of the created drive
+     * @return created drive
      */
     @Override
-    public Drive createDrive(long userID, long from, long to, long date, int vacantPlaces) {
+    public DriveView createDrive(long userID, long from, long to, long date, int vacantPlaces, Consumer<Drive> mapper) {
         Long driveID = jdbcTemplate.queryForObject("select nextval('drives_ids')", Long.class);
 
-        return new Drive(driveID, userID, from, to, date, vacantPlaces);
+        Drive drive = new Drive(driveID, userID, from, to, date, vacantPlaces);
+
+        try {
+            mapper.accept(drive);
+        }
+        catch (Exception e)
+        {
+            logger.error("Failed to access database while creating drive with ID " + driveID + " and user ID " + userID);
+            throw com.google.common.base.Throwables.propagate(e);
+        }
+
+        return drive;
     }
 
     /**
@@ -84,7 +95,7 @@ public class DriveDAOImpl implements DriveDAO {
             }
             catch (Exception e)
             {
-                //logger.warn...
+                logger.error("Failed to access database while doing modify on drive with ID " + ID);
                 drives.remove(ID);
                 throw Throwables.propagate(e);
             }

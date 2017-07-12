@@ -16,22 +16,22 @@ public class LogPassServiceTest {
 
     @Test
     public void testCreatingUserData() {
-        Optional<Long> id = logPassService.createNewUser(login, password);
+        Optional<Long> id = logPassService.getIDForUser(login, password);
         assertTrue("User with this ID should have been created", id.isPresent());
         assertEquals("Wrong userID", 1L, (long) id.get());
     }
 
     @Test
     public void testCreatingSameUserDataTwice() {
-        Optional<Long> id = logPassService.createNewUser(login, password);
-        Optional<Long> id1 = logPassService.createNewUser(login, password);
+        Optional<Long> id = logPassService.getIDForUser(login, password);
+        Optional<Long> id1 = logPassService.getIDForUser(login, password);
         assertFalse("User with this ID should not have been created", id1.isPresent());
     }
 
     @Test
     public void testCreatingManyUsers() {
         for (int i = 0; i < 10000; i++) {
-            logPassService.createNewUser("abc" + i, "123" + i);
+            logPassService.getIDForUser("abc" + i, "123" + i);
         }
         for (int i = 0; i < 10000; i++) {
             Optional<Long> userID = logPassService.getUserID("abc" + i, "123" + i);

@@ -10,7 +10,6 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Component;
 
 import java.util.Collection;
-import java.util.List;
 import java.util.Optional;
 
 @Component
@@ -34,7 +33,7 @@ public class UserService {
      * error message if a user with this login already exists
      */
     public Result<UserView> addUser(String login, String password) throws DataAccessException {
-        Optional<Long> ID = logPassService.createNewUser(login, password);
+        Optional<Long> ID = logPassService.getIDForUser(login, password);
 
         Result<UserView> result = new Result<>();
 
@@ -43,17 +42,11 @@ public class UserService {
             return result;
         }
 
-        User user = userDAO.createUser(ID.get());
-
-        try {
+        userDAO.createUser(ID.get(), user -> {
             updateDB.updateUserLogPass(user, ID.get(), login, password);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        result.setResult(user);
-
-        userDAO.putToCache(user);
+            userDAO.putToCache(user);
+            result.setResult(user);
+        });
 
         return result;
     }
