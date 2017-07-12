@@ -111,7 +111,12 @@ public class DriveDAOImpl implements DriveDAO {
      */
     @Override
     public Optional<DriveView> modify(long ID, Function<Drive, Optional<Drive>> mapper) {
-        driversCache.acquireWriteLockOnKey(ID);
+        try {
+            driversCache.acquireWriteLockOnKey(ID);
+        } catch (Exception e) {
+            e.addSuppressed(new Exception("This isn't working"));
+            Throwables.propagate(e);
+        }
         return getDrive(ID).flatMap(drive -> {
 //            drive.lock();
             try {
