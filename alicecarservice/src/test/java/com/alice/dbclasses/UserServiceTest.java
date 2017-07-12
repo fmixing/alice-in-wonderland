@@ -10,14 +10,13 @@ import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Iterator;
 import java.util.List;
 
 import static org.junit.Assert.*;
 
 public class UserServiceTest {
 
-    private UserDAO userDAO = new UserDAOImpl();
+    private UserDAO userDAO = new UserDAOImpl(null, null);
     private LogPassService logPassService = new LogPassService();
     private UpdateDB updateDB = new UpdateDB();
     private UserService userService = new UserService(userDAO, logPassService, updateDB);

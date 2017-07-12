@@ -1,16 +1,13 @@
 package com.alice.dbclasses.user;
 
-import com.alice.AppConfig;
 import com.google.common.base.Throwables;
 import net.sf.ehcache.Cache;
 import net.sf.ehcache.CacheManager;
 import net.sf.ehcache.Element;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 //import org.springframework.cache.CacheManager;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
@@ -25,11 +22,9 @@ import java.util.function.Function;
 public class UserDAOImpl implements UserDAO {
 
 
-    @Autowired
-    private CacheManager cacheManager;
+    private final CacheManager cacheManager;
 
-    @Autowired
-    private JdbcTemplate jdbcTemplate;
+    private final JdbcTemplate jdbcTemplate;
 
     private static final Logger logger = LoggerFactory.getLogger(UserDAOImpl.class);
 
@@ -42,16 +37,15 @@ public class UserDAOImpl implements UserDAO {
 
     private final Cache usersCache;
 
-    public UserDAOImpl() {
+    @Autowired
+    public UserDAOImpl(CacheManager cacheManager, JdbcTemplate jdbcTemplate) {
+        this.cacheManager = cacheManager;
+        this.jdbcTemplate = jdbcTemplate;
         users = new ConcurrentHashMap<>();
 //
 //        ApplicationContext context = new AnnotationConfigApplicationContext(AppConfig.class);
 //        cacheManager = (CacheManager) context.getBean("cacheManager");
-
-
-        cacheManager.addCache("usersCache");
-
-        usersCache = cacheManager.getCache("usersCache");
+        usersCache = this.cacheManager.getCache("usersCache");
     }
 
     /**

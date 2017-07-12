@@ -4,11 +4,9 @@ import com.alice.dbclasses.user.UserView;
 import com.alice.services.DriveService;
 import com.alice.services.LogPassService;
 import com.alice.services.UserService;
-import com.alice.dbclasses.drive.Drive;
 import com.alice.dbclasses.drive.DriveDAO;
 import com.alice.dbclasses.drive.DriveDAOImpl;
 import com.alice.dbclasses.drive.DriveView;
-import com.alice.dbclasses.user.User;
 import com.alice.dbclasses.user.UserDAO;
 import com.alice.dbclasses.user.UserDAOImpl;
 import com.alice.utils.Result;
@@ -19,14 +17,13 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
-import java.util.stream.Stream;
 
 import static org.junit.Assert.*;
 
 public class DriveServiceTest {
 
     private DriveDAO driveDAO = new DriveDAOImpl();
-    private UserDAO userDAO = new UserDAOImpl();
+    private UserDAO userDAO = new UserDAOImpl(null, null);
     private UpdateDB updateDB = new UpdateDB();
     private DriveService driveService = new DriveService(userDAO, driveDAO, updateDB);
     private LogPassService logPassService = new LogPassService();
