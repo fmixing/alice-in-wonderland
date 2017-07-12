@@ -4,11 +4,11 @@ package com.alice;
 import javax.sql.DataSource;
 
 import liquibase.integration.spring.SpringLiquibase;
+import net.sf.ehcache.CacheManager;
 import org.springframework.beans.factory.FactoryBean;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceBuilder;
 import org.springframework.boot.autoconfigure.liquibase.LiquibaseProperties;
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.cache.CacheManager;
 import org.springframework.cache.ehcache.EhCacheCacheManager;
 import org.springframework.cache.ehcache.EhCacheManagerFactoryBean;
 import org.springframework.context.annotation.Bean;
@@ -29,10 +29,10 @@ public class AppConfig
         return DataSourceBuilder.create().build();
     }
 
-/*
+
     @Bean
     public CacheManager cacheManager() {
-        return new EhCacheCacheManager(ehCacheCacheManager().getObject());
+        return new EhCacheCacheManager(ehCacheCacheManager().getObject()).getCacheManager();
     }
 
     @Bean
@@ -41,7 +41,7 @@ public class AppConfig
         cmfb.setConfigLocation(new ClassPathResource("ehcache.xml"));
         cmfb.setShared(true);
         return cmfb;
-    }*/
+    }
 
     @Bean
     public LiquibaseProperties liquibaseProperties()

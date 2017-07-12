@@ -1,0 +1,13 @@
+<ehcache xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="http://ehcache.org/ehcache.xsd" updateCheck="false" monitoring="off"
+         dynamicConfig="true" name="AliceCache">
+
+    <defaultCache maxElementsInMemory="20000" eternal="false" timeToIdleSeconds="3600" overflowToDisk="false"
+                  memoryStoreEvictionPolicy="LRU" transactionalMode="off" statistics="false">
+        <sizeOfPolicy maxDepth="1" maxDepthExceededBehavior="abort"/>
+    </defaultCache>
+
+    <cache name="usersCache" maxElementsInMemory="1000" timeToIdleSeconds="1800"/>
+
+    <cache name="drivesCache" maxElementsInMemory="1000" timeToIdleSeconds="1800"/>
+</ehcache>

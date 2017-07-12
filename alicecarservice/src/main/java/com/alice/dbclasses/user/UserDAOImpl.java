@@ -1,6 +1,5 @@
 package com.alice.dbclasses.user;
 
-import com.alice.AppConfig;
 import com.google.common.base.Throwables;
 import net.sf.ehcache.Cache;
 import net.sf.ehcache.CacheManager;
@@ -8,9 +7,6 @@ import net.sf.ehcache.Element;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-//import org.springframework.cache.CacheManager;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
@@ -24,12 +20,9 @@ import java.util.function.Function;
 @Component
 public class UserDAOImpl implements UserDAO {
 
+    private final CacheManager cacheManager;
 
-    @Autowired
-    private CacheManager cacheManager;
-
-    @Autowired
-    private JdbcTemplate jdbcTemplate;
+    private final JdbcTemplate jdbcTemplate;
 
     private static final Logger logger = LoggerFactory.getLogger(UserDAOImpl.class);
 
@@ -37,21 +30,17 @@ public class UserDAOImpl implements UserDAO {
     /**
      * Maps users IDs to {@code User}
      */
-    private final Map<Long, User> users;
+    //private final Map<Long, User> users;
 
 
     private final Cache usersCache;
 
-    public UserDAOImpl() {
-        users = new ConcurrentHashMap<>();
-//
-//        ApplicationContext context = new AnnotationConfigApplicationContext(AppConfig.class);
-//        cacheManager = (CacheManager) context.getBean("cacheManager");
-
-
-        cacheManager.addCache("usersCache");
-
-        usersCache = cacheManager.getCache("usersCache");
+    @Autowired
+    public UserDAOImpl(CacheManager cacheManager, JdbcTemplate jdbcTemplate) {
+        this.cacheManager = cacheManager;
+        this.jdbcTemplate = jdbcTemplate;
+//        users = new ConcurrentHashMap<>();
+        usersCache = this.cacheManager.getCache("usersCache");
     }
 
     /**
@@ -73,10 +62,17 @@ public class UserDAOImpl implements UserDAO {
     private Optional<User> getUser(long ID) {
         User user;
         try {
-            user = users.computeIfAbsent(ID, userID ->
-                (User) SerializationUtils.deserialize(jdbcTemplate.queryForObject("select blob from users where id = ?",
-                    byte[].class, userID)
-                    ));
+            if (usersCache.isKeyInCache(ID))
+                return Optional.of((User) usersCache.get(ID).getObjectValue());
+
+            user = (User) SerializationUtils.deserialize(jdbcTemplate.queryForObject("select blob from users where id = ?",
+                    byte[].class, ID));
+
+            usersCache.put(new Element(ID, user));
+//            user = users.computeIfAbsent(ID, userID ->
+//                (User) SerializationUtils.deserialize(jdbcTemplate.queryForObject("select blob from users where id = ?",
+//                    byte[].class, userID)
+//                    ));
         } catch (EmptyResultDataAccessException e) {
             return Optional.empty();
         }

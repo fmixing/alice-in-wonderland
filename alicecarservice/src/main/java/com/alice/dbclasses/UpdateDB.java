@@ -21,7 +21,7 @@ public class UpdateDB {
     /**
      * Writes data to users table and drives table as a transaction
      */
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public void updateUserDrive(User user, Drive drive) {
         byte[] data = SerializationUtils.serialize(user);
 
@@ -41,7 +41,7 @@ public class UpdateDB {
      * Writes data to users table and logpass table as a transaction
      * @param ID is unique because it was given by users_ids sequence in {@code LogPassService}
      */
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public void updateUserLogPass(User user, Long ID, String login, String password) {
         byte[] data = SerializationUtils.serialize(user);
 
@@ -49,7 +49,7 @@ public class UpdateDB {
                 login, password, ID);
 
 //        if (true)
-//            throw new RuntimeException();
+//            throw new Exception();
 
         jdbcTemplate.update("insert into users (id, blob) values (?, ?)",
                 ID, data);

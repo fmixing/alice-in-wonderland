@@ -25,8 +25,8 @@ import static org.junit.Assert.*;
 
 public class DriveServiceTest {
 
-    private DriveDAO driveDAO = new DriveDAOImpl();
-    private UserDAO userDAO = new UserDAOImpl();
+    private DriveDAO driveDAO = new DriveDAOImpl(null, null);
+    private UserDAO userDAO = new UserDAOImpl(null, null);
     private UpdateDB updateDB = new UpdateDB();
     private DriveService driveService = new DriveService(userDAO, driveDAO, updateDB);
     private LogPassService logPassService = new LogPassService();

@@ -3,7 +3,10 @@ package com.alice.dbclasses.drive;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-import jersey.repackaged.com.google.common.base.Throwables;
+import com.google.common.base.Throwables;
+import net.sf.ehcache.Cache;
+import net.sf.ehcache.CacheManager;
+import net.sf.ehcache.Element;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,8 +21,9 @@ import java.util.concurrent.ConcurrentHashMap;
 @Component
 public class DriveDAOImpl implements DriveDAO {
 
-    @Autowired
-    private JdbcTemplate jdbcTemplate;
+    private final CacheManager cacheManager;
+
+    private final JdbcTemplate jdbcTemplate;
 
     private static final Logger logger = LoggerFactory.getLogger(DriveDAOImpl.class);
 
@@ -27,10 +31,18 @@ public class DriveDAOImpl implements DriveDAO {
     /**
      * Maps drives IDs to {@code Drive}
      */
-    private final Map<Long, Drive> drives;
+//    private final Map<Long, Drive> drives;
 
-    public DriveDAOImpl() {
-        drives = new ConcurrentHashMap<>();
+    private final Cache driversCache;
+
+
+    @Autowired
+    public DriveDAOImpl(CacheManager cacheManager, JdbcTemplate jdbcTemplate) {
+//        drives = new ConcurrentHashMap<>();
+        this.cacheManager = cacheManager;
+        this.jdbcTemplate = jdbcTemplate;
+//        users = new ConcurrentHashMap<>();
+        driversCache = this.cacheManager.getCache("driversCache");
     }
 
 
@@ -49,7 +61,7 @@ public class DriveDAOImpl implements DriveDAO {
         catch (Exception e)
         {
             logger.error("Failed to access database while creating drive with ID " + driveID + " and user ID " + userID);
-            throw com.google.common.base.Throwables.propagate(e);
+            throw Throwables.propagate(e);
         }
 
         return drive;
@@ -63,16 +75,28 @@ public class DriveDAOImpl implements DriveDAO {
     @Override
     public Optional<DriveView> getDriveByID(long ID)
     {
-        return getDrive(ID).map(value -> (DriveView) value);
+        driversCache.acquireReadLockOnKey(ID);
+        try {
+            return getDrive(ID).map(value -> (DriveView) value);
+        } finally {
+            driversCache.releaseReadLockOnKey(ID);
+        }
     }
 
     private Optional<Drive> getDrive(long ID) {
         Drive drive;
         try {
-            drive = drives.computeIfAbsent(ID, driveID ->
-                    (Drive) SerializationUtils.deserialize(jdbcTemplate.queryForObject("select blob from drives where id = ?",
-                        byte[].class, driveID))
-            );
+            if (driversCache.isKeyInCache(ID))
+                return Optional.of((Drive) driversCache.get(ID).getObjectValue());
+
+            drive = (Drive) SerializationUtils.deserialize(jdbcTemplate.queryForObject("select blob from drives where id = ?",
+                        byte[].class, ID));
+
+            driversCache.put(new Element(ID, drive));
+//            drive = drives.computeIfAbsent(ID, driveID ->
+//                    (Drive) SerializationUtils.deserialize(jdbcTemplate.queryForObject("select blob from drives where id = ?",
+//                        byte[].class, driveID))
+//            );
         } catch (EmptyResultDataAccessException e) {
             return Optional.empty();
         }
@@ -87,27 +111,35 @@ public class DriveDAOImpl implements DriveDAO {
      */
     @Override
     public Optional<DriveView> modify(long ID, Function<Drive, Optional<Drive>> mapper) {
-
+        driversCache.acquireWriteLockOnKey(ID);
         return getDrive(ID).flatMap(drive -> {
-            drive.lock();
+//            drive.lock();
             try {
-                return mapper.apply(drive).map(result -> drives.put(ID, result));
+                Optional<Drive> result = mapper.apply(drive);
+                if (!result.isPresent())
+                    return Optional.empty();
+                driversCache.put(new Element(ID, result.get()));
+                return Optional.of(result.get());
+//                return mapper.apply(drive).map(result -> drives.put(ID, result));
             }
             catch (Exception e)
             {
                 logger.error("Failed to access database while doing modify on drive with ID " + ID);
-                drives.remove(ID);
+//                drives.remove(ID);
+                driversCache.remove(ID);
                 throw Throwables.propagate(e);
             }
             finally {
-                drive.unlock();
+//                drive.unlock();
+                driversCache.releaseWriteLockOnKey(ID);
             }
         });
     }
 
     @Override
     public void putToCache(Drive drive) {
-        drives.putIfAbsent(drive.getDriveID(), drive);
+//        drives.putIfAbsent(drive.getDriveID(), drive);
+        driversCache.putIfAbsent(new Element(drive.getDriveID(), drive));
     }
 
 

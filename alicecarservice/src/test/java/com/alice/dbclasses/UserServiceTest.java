@@ -17,7 +17,7 @@ import static org.junit.Assert.*;
 
 public class UserServiceTest {
 
-    private UserDAO userDAO = new UserDAOImpl();
+    private UserDAO userDAO = new UserDAOImpl(null, null);
     private LogPassService logPassService = new LogPassService();
     private UpdateDB updateDB = new UpdateDB();
     private UserService userService = new UserService(userDAO, logPassService, updateDB);
