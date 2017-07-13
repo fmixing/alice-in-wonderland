@@ -25,25 +25,21 @@ public class UserDAOImpl implements UserDAO {
 
     private static final Logger logger = LoggerFactory.getLogger(UserDAOImpl.class);
 
-
     /**
      * Maps users IDs to {@code User}
      */
-    //private final Map<Long, User> users;
-
     private final Ehcache usersCache;
 
     @Autowired
     public UserDAOImpl(CacheManager cacheManager, JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
-//        users = new ConcurrentHashMap<>();
         usersCache = cacheManager.getCache("usersCache");
         Objects.requireNonNull(usersCache);
     }
 
     /**
      * @param ID user's ID
-     * @return an {@code Optional} object which {@code User} if a user with this ID exists,
+     * @return an Optional object contains cloned {@code User} if a user with this ID exists,
      * an empty Optional otherwise
      */
     @Override
@@ -51,26 +47,27 @@ public class UserDAOImpl implements UserDAO {
     {
         usersCache.acquireReadLockOnKey(ID);
         try {
-            return getUser(ID).map(value -> (UserView) value);
+            return getUser(ID).map(value -> (UserView) org.apache.commons.lang3.SerializationUtils.clone(value));
         } finally {
             usersCache.releaseReadLockOnKey(ID);
         }
     }
 
+    /**
+     * Gets user from cache if it is possible, if not try to get it from database
+     * @return an Optional object contains {@code User} if a user with this ID exists,
+     * an empty optional otherwise
+     */
     private Optional<User> getUser(long ID) {
         User user;
         try {
-            if (usersCache.isKeyInCache(ID))
-                return Optional.of((User) usersCache.get(ID).getObjectValue());
-
+            Element element = usersCache.get(ID);
+            if (element != null) {
+                return Optional.of((User) element.getObjectValue());
+            }
             user = (User) SerializationUtils.deserialize(jdbcTemplate.queryForObject("select blob from users where id = ?",
                     byte[].class, ID));
-
             usersCache.put(new Element(ID, user));
-//            user = users.computeIfAbsent(ID, userID ->
-//                (User) SerializationUtils.deserialize(jdbcTemplate.queryForObject("select blob from users where id = ?",
-//                    byte[].class, userID)
-//                    ));
         } catch (EmptyResultDataAccessException e) {
             return Optional.empty();
         }
@@ -87,25 +84,20 @@ public class UserDAOImpl implements UserDAO {
     public Optional<UserView> modify(long ID, Function<User, Optional<User>> mapper) {
         usersCache.acquireWriteLockOnKey(ID);
         return getUser(ID).flatMap(user -> {
-        //    user.lock();
             try {
-                Optional<User> result = mapper.apply(user);
-                if (!result.isPresent())
-                    return Optional.empty();
-                usersCache.put(new Element(ID, result.get()));
-                return Optional.of(result.get());
-//                mapper.apply(user)
-//                         .map(result -> usersCache.put(new Element(ID, result)));
+                return mapper.apply(user)
+                         .map(result -> {
+                             usersCache.put(new Element(ID, result));
+                             return result;
+                         });
             }
             catch (Exception e)
             {
                 logger.error("Failed to access database while doing modify on user with ID " + ID);
-//                users.remove(ID);
                 usersCache.remove(ID);
                 throw Throwables.propagate(e);
             }
             finally {
-//                user.unlock();
                 usersCache.releaseWriteLockOnKey(ID);
             }
         });
@@ -131,9 +123,11 @@ public class UserDAOImpl implements UserDAO {
         return user;
     }
 
+    /**
+     * Puts a user to cache if it is absent there, using after creating user
+     */
     @Override
     public void putToCache(User user) {
-       // users.putIfAbsent(user.getUserID(), user);
         usersCache.putIfAbsent(new Element(user.getUserID(), user));
     }
 

@@ -4,12 +4,9 @@ package com.alice.dbclasses;
 import com.alice.dbclasses.drive.Drive;
 import com.alice.dbclasses.user.User;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.DataAccessException;
-import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.SerializationUtils;
 
 @Component
@@ -19,7 +16,7 @@ public class UpdateDB {
     private JdbcTemplate jdbcTemplate;
 
     /**
-     * Writes data to users table and drives table as a transaction
+     * Writes data to users and drives tables as a transaction
      */
     @Transactional(rollbackFor = Exception.class)
     public void updateUserDrive(User user, Drive drive) {
@@ -38,7 +35,7 @@ public class UpdateDB {
 
 
     /**
-     * Writes data to users table and logpass table as a transaction
+     * Writes data to users and logpass tables as a transaction
      * @param ID is unique because it was given by users_ids sequence in {@code LogPassService}
      */
     @Transactional(rollbackFor = Exception.class)
@@ -47,9 +44,6 @@ public class UpdateDB {
 
         jdbcTemplate.update("insert into logpass (log, pass, id) values (?, ?, ?)",
                 login, password, ID);
-
-//        if (true)
-//            throw new Exception();
 
         jdbcTemplate.update("insert into users (id, blob) values (?, ?)",
                 ID, data);

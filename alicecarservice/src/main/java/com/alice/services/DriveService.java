@@ -35,7 +35,7 @@ public class DriveService {
     }
 
     /**
-     * @return a {@code Result} object created created driveView with this data,
+     * @return a {@code Result} object contains created driveView with this data,
      * error message if a user with this userID doesn't exist
      */
     public Result<DriveView> addDrive(long userID, long from, long to, long date, int vacantPlaces) {
@@ -73,7 +73,7 @@ public class DriveService {
         Optional<DriveView> driveView = driveDAO.modify(driveID, drive -> {
             Optional<UserView> userView = userDAO.modify(userID, user -> {
                 if (drive.getUserID() == userID) {
-                    result.setMessage("User can't join to a drive which has created");
+                    result.setMessage("User can't join to a drive which they created");
                     return Optional.empty();
                 }
                 if (drive.getJoinedUsers().contains(userID)) {
