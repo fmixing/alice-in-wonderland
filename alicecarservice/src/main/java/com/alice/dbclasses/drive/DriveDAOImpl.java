@@ -4,8 +4,8 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 import com.google.common.base.Throwables;
-import net.sf.ehcache.Cache;
 import net.sf.ehcache.CacheManager;
+import net.sf.ehcache.Ehcache;
 import net.sf.ehcache.Element;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,12 +16,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.SerializationUtils;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Component
 public class DriveDAOImpl implements DriveDAO {
-
-    private final CacheManager cacheManager;
 
     private final JdbcTemplate jdbcTemplate;
 
@@ -33,16 +30,16 @@ public class DriveDAOImpl implements DriveDAO {
      */
 //    private final Map<Long, Drive> drives;
 
-    private final Cache driversCache;
+    private final Ehcache driversCache;
 
 
     @Autowired
     public DriveDAOImpl(CacheManager cacheManager, JdbcTemplate jdbcTemplate) {
 //        drives = new ConcurrentHashMap<>();
-        this.cacheManager = cacheManager;
         this.jdbcTemplate = jdbcTemplate;
 //        users = new ConcurrentHashMap<>();
-        driversCache = this.cacheManager.getCache("driversCache");
+        driversCache = cacheManager.getCache("drivesCache");
+        Objects.requireNonNull(driversCache);
     }
 
 
@@ -86,6 +83,7 @@ public class DriveDAOImpl implements DriveDAO {
     private Optional<Drive> getDrive(long ID) {
         Drive drive;
         try {
+            // тут плохо -- между isKeyInCache и get-ом кэш может протухнуть
             if (driversCache.isKeyInCache(ID))
                 return Optional.of((Drive) driversCache.get(ID).getObjectValue());
 
@@ -111,12 +109,8 @@ public class DriveDAOImpl implements DriveDAO {
      */
     @Override
     public Optional<DriveView> modify(long ID, Function<Drive, Optional<Drive>> mapper) {
-        try {
-            driversCache.acquireWriteLockOnKey(ID);
-        } catch (Exception e) {
-            e.addSuppressed(new Exception("This isn't working"));
-            Throwables.propagate(e);
-        }
+        // it works now :)
+        driversCache.acquireWriteLockOnKey(ID);
         return getDrive(ID).flatMap(drive -> {
 //            drive.lock();
             try {
