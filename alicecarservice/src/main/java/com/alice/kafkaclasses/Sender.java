@@ -36,12 +36,22 @@ public class Sender {
 
         producer = new KafkaProducer<>(props);
 
+        /*
+        можно не полагаться на спринговый шедулер, а сделать все самому, так, возможно, надежнее
+        Thread thread = new Thread(this::sendUpdates, getClass().getSimpleName() + "-Thread");
+        thread.setDaemon(true);
+        thread.start();
+        */
     }
 
     @Scheduled(fixedDelay = 3000)
     public void sendUpdates(){
 
         updateDB.sendUpdateDrives((id, drive) -> {
+            // мб переименовать в "drive-updates"? хз сколько ещё апдейтов будет всяких разных...
+            // + наверное стоит сделать что-то типа KafkaLogNaming-класса в котором хранить все эти стринги
+            // константами... Чтобы в соседнем проекте не нужно было синхронизировать имена логов и топиков по запаху...
+
             ProducerRecord<String, byte[]> record = new ProducerRecord<>("update", drive);
 
             producer.send(record, (metadata, e) -> {

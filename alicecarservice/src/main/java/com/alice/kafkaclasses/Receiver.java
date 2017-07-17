@@ -15,6 +15,7 @@ import java.util.Collections;
 import java.util.Properties;
 
 @Component
+// можно попробовать заимплементить SmartLifecycle...
 public class Receiver {
 
     private static final Logger logger = LoggerFactory.getLogger(Receiver.class);
@@ -37,6 +38,8 @@ public class Receiver {
         consumer.subscribe(Collections.singletonList("update"));
 
         consumerThread = new ConsumerThread();
+        // надо демонизировать поток, иначе есть шанс, что graceful shutdown не сработает
+        consumerThread.setDaemon(true);
         consumerThread.start();
     }
 
@@ -45,7 +48,8 @@ public class Receiver {
 
         public void run() {
             try {
-                while (true) {
+                while (!Thread.currentThread().isInterrupted()) {
+                    // таймаут полла надо сделать пропертей
                     ConsumerRecords<String, byte[]> records = consumer.poll(100);
                     for (ConsumerRecord record : records) {
                         Drive drive = SerializationUtils.deserialize((byte[]) record.value());
@@ -61,7 +65,5 @@ public class Receiver {
                 consumer.close();
             }
         }
-
     }
-
 }
