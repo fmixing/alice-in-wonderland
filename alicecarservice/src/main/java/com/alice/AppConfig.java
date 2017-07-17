@@ -63,4 +63,5 @@ public class AppConfig
         liquibase.setChangeLogParameters(properties.getParameters());
         return liquibase;
     }
+
 }

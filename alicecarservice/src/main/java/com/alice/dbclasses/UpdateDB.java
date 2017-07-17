@@ -3,21 +3,29 @@ package com.alice.dbclasses;
 
 import com.alice.dbclasses.drive.Drive;
 import com.alice.dbclasses.user.User;
+import com.google.common.base.Throwables;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.jmx.export.annotation.ManagedAttribute;
+import org.springframework.jmx.export.annotation.ManagedResource;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.SerializationUtils;
 
 import java.util.*;
-import java.util.function.BiConsumer;
+import java.util.concurrent.Future;
+import java.util.function.BiFunction;
+import java.util.stream.Collectors;
 
 @Component
+@ManagedResource
 public class UpdateDB {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    private volatile int limit = 1000;
 
     /**
      * Writes data to users and drives tables as a transaction
@@ -54,30 +62,47 @@ public class UpdateDB {
     }
 
     /**
-     * Sends updated drives to Kafka and deletes sent drives
+     * Sends limited amount of updated drives to Kafka and deletes sent drives as a transaction
      * @param sender Sends drive and waits for callback
      */
     @Transactional(rollbackFor = Exception.class)
-    public void sendUpdateDrives(BiConsumer<Long, byte[]> sender){
-        List<Map<String, Object>> idsDrivesFromTable = jdbcTemplate.queryForList("select id, blob from update_drives");
+    public void sendUpdateDrives(BiFunction<Long, byte[], Future<?>> sender){
+        List<Map<Long, byte[]>> idsDrivesFromTable = jdbcTemplate.query(
+                "select id, blob from update_drives order by id ASC limit ?",
+                (resultSet, i) -> {
+                    long id = resultSet.getLong(1);
+                    byte[] blob = resultSet.getBytes(2);
+                    return Collections.singletonMap(id, blob);
+                }, limit);
 
-        Map<Long, byte[]> drivesToSend = new TreeMap<>();
+        List<Long> ids = idsDrivesFromTable.stream().flatMap(m -> m.keySet().stream()).collect(Collectors.toList());
 
-        for (Map<String, Object> idDrive : idsDrivesFromTable) {
-            Long id = (Long) idDrive.get("id");
-            byte[] drive = (byte[]) idDrive.get("blob");
-
-            drivesToSend.put(id, drive);
-        }
-
-        if (!drivesToSend.isEmpty()) {
-
+        if (!ids.isEmpty()) {
             NamedParameterJdbcTemplate namedTemplate = new NamedParameterJdbcTemplate(jdbcTemplate);
-            Map<String, Set> params = Collections.singletonMap("ids", drivesToSend.keySet());
+            Map<String, List<Long>> params = Collections.singletonMap("ids", ids);
             namedTemplate.update("delete from update_drives where id in (:ids)", params);
 
-            drivesToSend.forEach(sender);
+            List<? extends Future<?>> futures = idsDrivesFromTable.stream().flatMap(map -> map.entrySet().stream()
+                    .map(entry -> sender.apply(entry.getKey(), entry.getValue())))
+                    .collect(Collectors.toList());
+
+            for (Future<?> future : futures) {
+                try {
+                    future.get();
+                } catch (Exception e) {
+                    Throwables.propagate(e);
+                }
+            }
         }
     }
 
+    @ManagedAttribute
+    public int getLimit() {
+        return limit;
+    }
+
+    @ManagedAttribute
+    public void setLimit(int limit) {
+        this.limit = limit;
+    }
 }

@@ -6,6 +6,7 @@ import org.apache.kafka.clients.producer.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.env.Environment;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -16,40 +17,41 @@ public class Sender {
 
     private static final Logger logger = LoggerFactory.getLogger(Sender.class);
 
-    private final Properties props;
+    private Properties props;
 
-    private final Producer<String, byte[]> producer;
+    private Producer<String, byte[]> producer;
 
     private final UpdateDB updateDB;
 
     @Autowired
-    public Sender(UpdateDB updateDB) {
+    public Sender(UpdateDB updateDB, Environment environment) {
         this.updateDB = updateDB;
-
         props = new Properties();
-        props.put("bootstrap.servers", "localhost:9092");
-//        props.put("acks", "all");
-        props.put("retries", 0);
-        props.put("batch.size", 16384);
-        props.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
-        props.put("value.serializer", "org.apache.kafka.common.serialization.ByteArraySerializer");
+        props.put("bootstrap.servers", environment.getProperty("producer.bootstrap.servers"));
+        props.put("retries", environment.getProperty("producer.retries"));
+        props.put("batch.size", environment.getProperty("producer.batch.size"));
+        props.put("key.serializer", environment.getProperty("producer.key.serializer"));
+        props.put("value.serializer", environment.getProperty("producer.value.serializer"));
 
         producer = new KafkaProducer<>(props);
-
     }
 
-    @Scheduled(fixedDelay = 3000)
+
+    /**
+     * Regularly sends updated drives to Kafka
+     */
+    @Scheduled(fixedDelay = 4000)
     public void sendUpdates(){
 
         updateDB.sendUpdateDrives((id, drive) -> {
-            ProducerRecord<String, byte[]> record = new ProducerRecord<>("update", drive);
+            ProducerRecord<String, byte[]> record = new ProducerRecord<>(KafkaTopics.updateDrives, drive);
 
-            producer.send(record, (metadata, e) -> {
+            return producer.send(record, (metadata, e) -> {
                 if (e != null) {
-                    logger.error("Error occurred while sending drive update with id='{}' to topic='update'", id);
+                    logger.error("Error occurred while sending drive update with id='{}' to topic='{}'", id, KafkaTopics.updateDrives);
                     Throwables.propagate(e);
                 }
-                logger.info("drive with id='{}' has been sent to topic='update', the offset is {}", id, metadata.offset());
+                logger.info("drive update with id='{}' has been sent to topic='{}', the offset is {}", id, KafkaTopics.updateDrives, metadata.offset());
             });
         });
     }

@@ -9,6 +9,8 @@ import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
 import java.util.Collections;
@@ -25,28 +27,36 @@ public class Receiver {
 
     private final ConsumerThread consumerThread;
 
-    @Autowired
-    public Receiver() {
-        props = new Properties();
-        props.put("bootstrap.servers", "localhost:9092");
-        props.put("group.id", "updates");
-        props.put("enable.auto.commit", "false");
-        props.put("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
-        props.put("value.deserializer", "org.apache.kafka.common.serialization.ByteArrayDeserializer");
-        consumer = new KafkaConsumer<>(props);
-        consumer.subscribe(Collections.singletonList("update"));
+    @Value("${consumer.poll.timeout}")
+    private long pollTimeout = 1000;
 
-        consumerThread = new ConsumerThread();
+    @Autowired
+    public Receiver(Environment environment) {
+        props = new Properties();
+        props.put("bootstrap.servers", environment.getProperty("consumer.bootstrap.servers"));
+        props.put("group.id", environment.getProperty("consumer.group.id"));
+        props.put("enable.auto.commit", environment.getProperty("consumer.enable.auto.commit"));
+        props.put("key.deserializer", environment.getProperty("consumer.key.deserializer"));
+        props.put("value.deserializer", environment.getProperty("consumer.value.deserializer"));
+        consumer = new KafkaConsumer<>(props);
+        consumer.subscribe(Collections.singletonList(KafkaTopics.updateDrives));
+
+        consumerThread = new ConsumerThread("ConsumerThread");
+        consumerThread.setDaemon(true);
         consumerThread.start();
     }
 
 
     private class ConsumerThread extends Thread {
 
+        ConsumerThread(String name) {
+            super(name);
+        }
+
         public void run() {
             try {
-                while (true) {
-                    ConsumerRecords<String, byte[]> records = consumer.poll(100);
+                while (!Thread.currentThread().isInterrupted()) {
+                    ConsumerRecords<String, byte[]> records = consumer.poll(pollTimeout);
                     for (ConsumerRecord record : records) {
                         Drive drive = SerializationUtils.deserialize((byte[]) record.value());
 
