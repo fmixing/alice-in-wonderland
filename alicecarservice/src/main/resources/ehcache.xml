@@ -10,4 +10,8 @@
     <cache name="usersCache" maxElementsInMemory="1000" timeToIdleSeconds="1800"/>
 
     <cache name="drivesCache" maxElementsInMemory="1000" timeToIdleSeconds="1800"/>
+
+    <cache name="usersLockCache" maxElementsInMemory="1" timeToIdleSeconds="1"/>
+
+    <cache name="drivesLockCache" maxElementsInMemory="1" timeToIdleSeconds="1"/>
 </ehcache>

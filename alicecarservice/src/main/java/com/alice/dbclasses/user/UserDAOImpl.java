@@ -1,13 +1,13 @@
 package com.alice.dbclasses.user;
 
 import com.google.common.base.Throwables;
-import net.sf.ehcache.Cache;
-import net.sf.ehcache.CacheManager;
-import net.sf.ehcache.Ehcache;
-import net.sf.ehcache.Element;
+import net.sf.ehcache.*;
+import net.sf.ehcache.constructs.blocking.CacheEntryFactory;
+import net.sf.ehcache.constructs.blocking.SelfPopulatingCache;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataAccessException;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
@@ -28,13 +28,20 @@ public class UserDAOImpl implements UserDAO {
     /**
      * Maps users IDs to {@code User}
      */
-    private final Ehcache usersCache;
+    private final SelfPopulatingCache selfPopulatingCache;
+
+    private final Ehcache usersLockCache;
 
     @Autowired
     public UserDAOImpl(CacheManager cacheManager, JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
-        usersCache = cacheManager.getCache("usersCache");
+        Ehcache usersCache = cacheManager.getCache("usersCache");
         Objects.requireNonNull(usersCache);
+        selfPopulatingCache = new SelfPopulatingCache(usersCache, key ->
+                SerializationUtils.deserialize(jdbcTemplate.queryForObject("select blob from users where id = ?",
+                    byte[].class, (Long) key)));
+        usersLockCache = cacheManager.getCache("usersLockCache");
+        Objects.requireNonNull(usersLockCache);
     }
 
     /**
@@ -45,11 +52,11 @@ public class UserDAOImpl implements UserDAO {
     @Override
     public Optional<UserView> getUserByID(long ID)
     {
-        usersCache.acquireReadLockOnKey(ID);
+        usersLockCache.acquireReadLockOnKey(ID);
         try {
             return getUser(ID).map(value -> (UserView) org.apache.commons.lang3.SerializationUtils.clone(value));
         } finally {
-            usersCache.releaseReadLockOnKey(ID);
+            usersLockCache.releaseReadLockOnKey(ID);
         }
     }
 
@@ -59,19 +66,13 @@ public class UserDAOImpl implements UserDAO {
      * an empty optional otherwise
      */
     private Optional<User> getUser(long ID) {
-        User user;
         try {
-            Element element = usersCache.get(ID);
-            if (element != null) {
-                return Optional.of((User) element.getObjectValue());
-            }
-            user = (User) SerializationUtils.deserialize(jdbcTemplate.queryForObject("select blob from users where id = ?",
-                    byte[].class, ID));
-            usersCache.put(new Element(ID, user));
-        } catch (EmptyResultDataAccessException e) {
+            Element element = selfPopulatingCache.get(ID);
+            Objects.requireNonNull(element);
+            return Optional.of((User) element.getObjectValue());
+        } catch (EmptyResultDataAccessException | NullPointerException e) {
             return Optional.empty();
         }
-        return Optional.of(user);
     }
 
 
@@ -82,23 +83,23 @@ public class UserDAOImpl implements UserDAO {
      */
     @Override
     public Optional<UserView> modify(long ID, Function<User, Optional<User>> mapper) {
-        usersCache.acquireWriteLockOnKey(ID);
+        usersLockCache.acquireWriteLockOnKey(ID);
         return getUser(ID).flatMap(user -> {
             try {
                 return mapper.apply(user)
                          .map(result -> {
-                             usersCache.put(new Element(ID, result));
+                             selfPopulatingCache.put(new Element(ID, result));
                              return result;
                          });
             }
             catch (Exception e)
             {
                 logger.error("Failed to access database while doing modify on user with ID " + ID);
-                usersCache.remove(ID);
+                selfPopulatingCache.remove(ID);
                 throw Throwables.propagate(e);
             }
             finally {
-                usersCache.releaseWriteLockOnKey(ID);
+                usersLockCache.releaseWriteLockOnKey(ID);
             }
         });
     }
@@ -128,7 +129,7 @@ public class UserDAOImpl implements UserDAO {
      */
     @Override
     public void putToCache(User user) {
-        usersCache.putIfAbsent(new Element(user.getUserID(), user));
+        selfPopulatingCache.putIfAbsent(new Element(user.getUserID(), user));
     }
 
     /**

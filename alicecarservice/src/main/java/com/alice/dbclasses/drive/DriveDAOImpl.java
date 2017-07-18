@@ -7,6 +7,7 @@ import com.google.common.base.Throwables;
 import net.sf.ehcache.CacheManager;
 import net.sf.ehcache.Ehcache;
 import net.sf.ehcache.Element;
+import net.sf.ehcache.constructs.blocking.SelfPopulatingCache;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,16 +26,22 @@ public class DriveDAOImpl implements DriveDAO {
     private static final Logger logger = LoggerFactory.getLogger(DriveDAOImpl.class);
 
     /**
-     * Maps drives IDs to {@code Drive}
+     * Maps users IDs to {@code User}
      */
-    private final Ehcache driversCache;
+    private final SelfPopulatingCache selfPopulatingCache;
+
+    private final Ehcache drivesLockCache;
 
 
     @Autowired
     public DriveDAOImpl(CacheManager cacheManager, JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
-        driversCache = cacheManager.getCache("drivesCache");
+        Ehcache driversCache = cacheManager.getCache("drivesCache");
         Objects.requireNonNull(driversCache);
+        selfPopulatingCache = new SelfPopulatingCache(driversCache, key ->
+                SerializationUtils.deserialize(jdbcTemplate.queryForObject("select blob from drives where id = ?",
+                        byte[].class, (Long) key)));
+        drivesLockCache = cacheManager.getCache("drivesLockCache");
     }
 
 
@@ -67,11 +74,11 @@ public class DriveDAOImpl implements DriveDAO {
     @Override
     public Optional<DriveView> getDriveByID(long ID)
     {
-        driversCache.acquireReadLockOnKey(ID);
+        drivesLockCache.acquireReadLockOnKey(ID);
         try {
             return getDrive(ID).map(value -> (DriveView) org.apache.commons.lang3.SerializationUtils.clone(value));
         } finally {
-            driversCache.releaseReadLockOnKey(ID);
+            drivesLockCache.releaseReadLockOnKey(ID);
         }
     }
 
@@ -81,20 +88,15 @@ public class DriveDAOImpl implements DriveDAO {
      * an empty Optional otherwise
      */
     private Optional<Drive> getDrive(long ID) {
-        Drive drive;
         try {
-            Element element = driversCache.get(ID);
-            if (element != null)
-                return Optional.of((Drive) element.getObjectValue());
+            Element element = selfPopulatingCache.get(ID);
+            Objects.requireNonNull(element);
 
-            drive = (Drive) SerializationUtils.deserialize(jdbcTemplate.queryForObject("select blob from drives where id = ?",
-                        byte[].class, ID));
+            return Optional.of((Drive) element.getObjectValue());
 
-            driversCache.put(new Element(ID, drive));
-        } catch (EmptyResultDataAccessException e) {
+        } catch (EmptyResultDataAccessException | NullPointerException e) {
             return Optional.empty();
         }
-        return Optional.of(drive);
     }
 
 
@@ -105,22 +107,23 @@ public class DriveDAOImpl implements DriveDAO {
      */
     @Override
     public Optional<DriveView> modify(long ID, Function<Drive, Optional<Drive>> mapper) {
-        driversCache.acquireWriteLockOnKey(ID);
+        drivesLockCache.acquireWriteLockOnKey(ID);
         return getDrive(ID).flatMap(drive -> {
             try {
-                return mapper.apply(drive).map(result -> {
-                    driversCache.put(new Element(ID, result));
-                    return result;
-                });
+                return mapper.apply(drive)
+                        .map(result -> {
+                            selfPopulatingCache.put(new Element(ID, result));
+                            return result;
+                        });
             }
             catch (Exception e)
             {
                 logger.error("Failed to access database while doing modify on drive with ID {}", ID);
-                driversCache.remove(ID);
+                selfPopulatingCache.remove(ID);
                 throw Throwables.propagate(e);
             }
             finally {
-                driversCache.releaseWriteLockOnKey(ID);
+                drivesLockCache.releaseWriteLockOnKey(ID);
             }
         });
     }
@@ -130,7 +133,7 @@ public class DriveDAOImpl implements DriveDAO {
      */
     @Override
     public void putToCache(Drive drive) {
-        driversCache.putIfAbsent(new Element(drive.getDriveID(), drive));
+        selfPopulatingCache.putIfAbsent(new Element(drive.getDriveID(), drive));
     }
 
 

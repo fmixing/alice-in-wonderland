@@ -12,7 +12,7 @@ public class Result<T> {
     /**
      * Contains the exception message
      */
-    private String message;
+    private String message = "Unknown problem";
 
     /**
      * True if the result is present, false otherwise
