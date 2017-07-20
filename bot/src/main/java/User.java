@@ -34,18 +34,13 @@ public class User {
         this.joinedDrives = joinedDrives;
     }
 
+    @Override
     public String toString() {
-        StringBuilder toStr = new StringBuilder("User{" +
-                "userID=" + userID);
-        if (!joinedDrives.isEmpty()) {
-            toStr.append(";joinedDrives=");
-            joinedDrives.forEach(v -> toStr.append(v).append(" "));
-        }
-        if (!postedDrives.isEmpty()) {
-            toStr.append(";postedDrives=");
-            postedDrives.forEach(v -> toStr.append(v).append(" "));
-        }
-        toStr.append('}');
-        return toStr.toString();
+        final StringBuilder sb = new StringBuilder("User{");
+        sb.append("userID=").append(userID);
+        sb.append(", postedDrives=").append(postedDrives);
+        sb.append(", joinedDrives=").append(joinedDrives);
+        sb.append('}');
+        return sb.toString();
     }
 }
