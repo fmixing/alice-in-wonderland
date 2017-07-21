@@ -18,8 +18,7 @@
 
         <dependency>
             <groupId>com.example</groupId>
-            <artifactId>alicecarservice</artifactId>
-            <version>0.1-SNAPSHOT</version>
+            <artifactId>api</artifactId>
         </dependency>
         <!--Spring Boot-->
         <dependency>
@@ -40,7 +39,6 @@
         <dependency>
             <groupId>org.springframework.data</groupId>
             <artifactId>spring-data-commons</artifactId>
-            <version>1.13.1.RELEASE</version>
         </dependency>
 
         <dependency>
@@ -51,7 +49,6 @@
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
-            <version>42.1.2</version>
         </dependency>
 
         <dependency>
@@ -63,13 +60,11 @@
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>
-            <version>RELEASE</version>
         </dependency>
 
         <dependency>
             <groupId>org.apache.kafka</groupId>
             <artifactId>kafka-clients</artifactId>
-            <version>0.11.0.0</version>
         </dependency>
 
         <dependency>

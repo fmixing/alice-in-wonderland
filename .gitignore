@@ -71,4 +71,4 @@ datasource.properties
 telegram.properties
 *.iml
 .idea/*
-target/*
+*/target/*
