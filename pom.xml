@@ -9,6 +9,7 @@
     <modules>
         <module>alicecarservice</module>
         <module>bot</module>
+        <module>searchservice</module>
     </modules>
 
     <packaging>pom</packaging>
@@ -36,6 +37,13 @@
     </properties>
 
     <dependencies>
+
+
+        <dependency>
+            <groupId>com.example</groupId>
+            <artifactId>alicecarservice</artifactId>
+            <version>0.1-SNAPSHOT</version>
+        </dependency>
         <!--Spring Boot-->
         <dependency>
             <groupId>org.springframework.boot</groupId>

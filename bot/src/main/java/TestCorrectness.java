@@ -1,12 +1,17 @@
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentMap;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 public class TestCorrectness {
 
-   // private static final Logger logger = LoggerFactory.getLogger(TestCorrectness.class);
+    private static final Logger logger = LoggerFactory.getLogger(TestCorrectness.class);
 
     private RestTemplate restTemplate = new RestTemplate();
 
@@ -46,11 +51,49 @@ public class TestCorrectness {
             }
         });
 
-        Long totalAmountThreads = clientThreads.stream().map(ClientThread::getSuccessful).count();
-        Long totalAmountDrives = drives.stream().map(Drive::getJoinedUsers).count();
-        if (!totalAmountThreads.equals(totalAmountDrives)) {
-            System.out.println("Total amount of joined users: " + totalAmountThreads + " total amount of successful joining:  " + totalAmountDrives);
+
+        builder = UriComponentsBuilder.fromHttpUrl("http://localhost:8181/api/users/get_all_JSON");
+
+        responseEntityUsers = restTemplate.getForEntity(builder.build().toString(), User[].class);
+
+        users = Arrays.asList(responseEntityUsers.getBody());
+
+        builder = UriComponentsBuilder.fromHttpUrl("http://localhost:8181/api/drives/get_all_JSON");
+
+        responseEntityDrives = restTemplate.getForEntity(builder.build().toString(), Drive[].class);
+
+        drives = Collections.synchronizedList(Arrays.asList(responseEntityDrives.getBody()));
+
+        ConcurrentMap<Long, Drive> drivesMap = drives.stream().collect(Collectors.toConcurrentMap(Drive::getDriveID, Function.identity()));
+        ConcurrentMap<Long, User> usersMap = users.stream().collect(Collectors.toConcurrentMap(User::getUserID, Function.identity()));
+
+
+        Integer totalAmountJoinedDrives = users.stream().map(User::getJoinedDrives).mapToInt(Set::size).sum();
+        Integer totalAmountDrives = drives.stream().map(Drive::getJoinedUsers).mapToInt(Set::size).sum();
+
+
+
+        if (!totalAmountJoinedDrives.equals(totalAmountDrives)) {
+            System.out.println("Total amount users' joined drives: " + totalAmountJoinedDrives + ", total amount of successful joining:  " + totalAmountDrives);
         }
+
+        for (User user : users) {
+            for (Long driveID : user.getJoinedDrives()) {
+                if (!drivesMap.get(driveID).joinedUsers.contains(user.userID))
+                    throw new RuntimeException("UserID " +user.userID + ", driveID " + driveID);
+            }
+        }
+
+        for (Drive drive : drives) {
+            for (Long userID : drive.getJoinedUsers()) {
+                if (!usersMap.get(userID).joinedDrives.contains(drive.driveID))
+                    throw new RuntimeException("DriveID " +drive.driveID + ", userID " + userID);
+            }
+            if (drive.joinedUsers.size() > drive.vacantPlaces)
+                throw new RuntimeException("DriveID " + drive.driveID);
+        }
+
+
 
         boolean posted = clientThreads.stream().map(ClientThread::isPosted).allMatch(e -> e.equals(true));
 
@@ -72,7 +115,6 @@ public class TestCorrectness {
         private Drive drive;
         private UriComponentsBuilder builder;
 
-        private int successful = 0;
         private boolean posted = false;
 
 
@@ -97,21 +139,16 @@ public class TestCorrectness {
                 ResultDrive resultDrive = restTemplate.getForObject(builder.build().toString(), ResultDrive.class);
 
                 if (resultDrive.hasResult()) {
-                    successful++;
-      //              logger.info("Request: join drive, got a drive : '{}'", resultDrive.getJsonDrive());
+                    logger.info("Request: join drive, got a drive : '{}'", resultDrive.getJsonDrive());
                 }
                 else {
                     if (resultDrive.getMessage().equals("User can't join to a drive which they created")) {
                         posted = true;
                     }
-        //            logger.info("Request: join drive, got an error : '{}'", resultDrive.getMessage());
+                    logger.info("Request: join drive, got an error : '{}'", resultDrive.getMessage());
                 }
             }
 
-        }
-
-        public int getSuccessful() {
-            return successful;
         }
 
         public boolean isPosted() {
