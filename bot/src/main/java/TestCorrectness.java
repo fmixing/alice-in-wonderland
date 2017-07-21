@@ -1,6 +1,7 @@
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -20,6 +21,8 @@ public class TestCorrectness {
     private List<Drive> drives;
 
     public TestCorrectness() {
+
+        createDataInDB();
 
         UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl("http://localhost:8181/api/users/get_all_JSON");
 
@@ -102,6 +105,7 @@ public class TestCorrectness {
             for (ClientThread clientThread : clientThreads) {
                 if (!clientThread.isPosted()) {
                     System.out.print(clientThread.getUserID() + " ");
+
                     users.stream().filter(v -> v.getUserID().equals(clientThread.getUserID())).forEach(System.out::println);
                 }
             }
@@ -109,13 +113,79 @@ public class TestCorrectness {
 
     }
 
+    private void createDataInDB() {
+        for (int i = 0; i < 200; i++) {
+            UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl("http://localhost:8181/api/users/create_JSON")
+                    .queryParam("login", "aaa" + i)
+                    .queryParam("password", "bbb");
+
+            ResultUser resultUser = null;
+
+            boolean sent = false;
+
+            while (!sent) {
+                try {
+                    resultUser = restTemplate.getForObject(builder.build().toString(), ResultUser.class);
+
+                    if (resultUser.hasMessage()) {
+                        logger.info("Request: create user, got an error : '{}', time spent on request = {}", resultUser.getMessage());
+                    } else {
+                        logger.info("Request: create user, got a user : '{}', time spent on request = {}", resultUser.getJsonUser());
+                    }
+                    sent = true;
+                } catch (Exception e) {
+                    logger.error("Request: join drive, got an exception : '{}'", e.getMessage());
+                }
+            }
+
+            GregorianCalendar calendar = new GregorianCalendar();
+            int year = randBetween(2017, 2018);
+            calendar.set(GregorianCalendar.YEAR, year);
+            int dayOfYear = randBetween(1, calendar.getActualMaximum(GregorianCalendar.DAY_OF_YEAR));
+            calendar.set(GregorianCalendar.DAY_OF_YEAR, dayOfYear);
+            long date = calendar.getTime().getTime();
+
+            builder = UriComponentsBuilder.fromHttpUrl("http://localhost:8181/api/drives/create_JSON")
+                    .queryParam("userID", resultUser.getJsonUser().getUserID())
+                    .queryParam("from", 1)
+                    .queryParam("to", 2)
+                    .queryParam("vacantPlaces", 2)
+                    .queryParam("date", date);
+
+            sent = false;
+
+            while (!sent) {
+
+                try {
+                    ResultDrive resultDrive = restTemplate.getForObject(builder.build().toString(), ResultDrive.class);
+
+                    if (resultDrive.hasMessage()) {
+                        logger.info("Request: create drive, got an error : '{}', time spent on request = {}", resultDrive.getMessage());
+                    } else {
+                        logger.info("Request: create drive, got a drive : '{}', time spent on request = {}",
+                                resultDrive.getJsonDrive());
+                    }
+                    sent = true;
+                } catch (Exception e) {
+                    logger.error("Request: join drive, got an exception : '{}'", e.getMessage());
+                }
+            }
+        }
+    }
+
+
+    private int randBetween(int start, int end) {
+        return start + (int)Math.round(Math.random() * (end - start));
+    }
+
+
     private class ClientThread extends Thread {
 
         private Long userID;
         private Drive drive;
         private UriComponentsBuilder builder;
 
-        private boolean posted = false;
+        private volatile boolean posted = false;
 
 
         public ClientThread(String name, Long userID) {
@@ -128,7 +198,11 @@ public class TestCorrectness {
 
             int rand = new Random().nextInt(drives.size());
 
+
+
             for (int i = 0; i < drives.size(); i++) {
+
+                boolean sent = false;
 
                 drive = drives.get((rand + i) % drives.size());
 
@@ -136,17 +210,27 @@ public class TestCorrectness {
                         .queryParam("userID", userID)
                         .queryParam("driveID", drive.driveID);
 
-                ResultDrive resultDrive = restTemplate.getForObject(builder.build().toString(), ResultDrive.class);
+                logger.info("Request: join drive, url : '{}'", builder.build().toString());
 
-                if (resultDrive.hasResult()) {
-                    logger.info("Request: join drive, got a drive : '{}'", resultDrive.getJsonDrive());
-                }
-                else {
-                    if (resultDrive.getMessage().equals("User can't join to a drive which they created")) {
-                        posted = true;
+                while (!sent) {
+
+                    ResultDrive resultDrive = null;
+                    try {
+                        resultDrive = restTemplate.getForObject(builder.build().toString(), ResultDrive.class);
+                        if (resultDrive.hasResult()) {
+                            logger.info("Request: join drive, got a drive : '{}'", resultDrive.getJsonDrive());
+                        } else {
+                            if (resultDrive.getMessage().equals("User can't join to a drive which they created")) {
+                                posted = true;
+                            }
+                            logger.info("Request: join drive, got an error : '{}'", resultDrive.getMessage());
+                        }
+                        sent = true;
+                    } catch (Exception e) {
+                        logger.error("Request: join drive, got an exception : '{}'", e.getMessage());
                     }
-                    logger.info("Request: join drive, got an error : '{}'", resultDrive.getMessage());
                 }
+
             }
 
         }

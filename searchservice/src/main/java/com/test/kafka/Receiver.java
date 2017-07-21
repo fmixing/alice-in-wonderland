@@ -1,6 +1,6 @@
 package com.test.kafka;
 
-import com.test.drive.Drive;
+import com.test.db.UpdateDB;
 import org.apache.commons.lang3.SerializationUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,11 +34,13 @@ public class Receiver {
 
     private final ConsumerThread consumerThread;
 
+    private final UpdateDB updateDB;
+
     @Value("${consumer.poll.timeout}")
     private long pollTimeout = 1000;
 
     @Autowired
-    public Receiver(Environment environment) {
+    public Receiver(Environment environment, UpdateDB updateDB) {
         props = new Properties();
         System.err.println(environment);
         props.put("bootstrap.servers", environment.getProperty("consumer.bootstrap.servers"));
@@ -48,6 +50,8 @@ public class Receiver {
         props.put("value.deserializer", environment.getProperty("consumer.value.deserializer"));
         consumer = new KafkaConsumer<>(props);
         consumer.subscribe(Collections.singletonList(updateDrives));
+
+        this.updateDB = updateDB;
 
         consumerThread = new ConsumerThread("ConsumerThread");
         consumerThread.setDaemon(true);
@@ -66,19 +70,26 @@ public class Receiver {
                 while (!Thread.currentThread().isInterrupted()) {
                     ConsumerRecords<String, byte[]> records = consumer.poll(pollTimeout);
 
-                    Iterable<ConsumerRecord<String, byte[]>> records1 = records.records(updateDrives);
-
                     List<com.alice.dbclasses.drive.Drive> drives = new ArrayList<>();
 
                     for (ConsumerRecord record : records) {
                         com.alice.dbclasses.drive.Drive drive = SerializationUtils.deserialize((byte[]) record.value());
 
-                        if (drives.size() < transactionSize)
-
-
                         logger.info("drive='{}' with topic='{}' and offset='{}' has been received", drive.getDriveID(),
                                 record.topic(), record.offset());
 
+                        if (drives.size() < transactionSize) {
+                            drives.add(drive);
+                        }
+                        else {
+                            updateDB.updateDrives(drives);
+                            drives.clear();
+                            drives.add(drive);
+                        }
+                    }
+                    if (!drives.isEmpty()) {
+                        updateDB.updateDrives(drives);
+                        drives.clear();
                     }
                     consumer.commitSync();
                 }

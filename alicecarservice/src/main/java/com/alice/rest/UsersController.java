@@ -1,6 +1,7 @@
 package com.alice.rest;
 
 import com.alice.dbclasses.user.UserView;
+import com.alice.services.LogPassService;
 import com.alice.services.UserService;
 import com.alice.utils.Result;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import java.util.Collection;
+import java.util.Optional;
 
 @Controller
 @RequestMapping("/api/users")
@@ -19,6 +21,9 @@ public class UsersController {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private LogPassService logPassService;
 
     @RequestMapping("create_JSON")
     public String createJSON(Model model,
@@ -70,6 +75,22 @@ public class UsersController {
     public @ResponseBody Collection<UserView> getAllJSON(Model model) {
 
         return userService.getAllUsers();
+    }
+
+    @RequestMapping("get_user_id")
+    public @ResponseBody Optional<Long> getUserID(
+            Model model,
+            @RequestParam(value="login", required=true) String login,
+            @RequestParam(value="password", required=true) String password) {
+
+        Optional<Long> ID = null;
+        try {
+            ID = logPassService.getUserID(login, password);
+        } catch (Exception e) {
+            return Optional.empty();
+        }
+
+        return ID;
     }
 
 }

@@ -8,6 +8,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import java.util.ArrayList;
+import java.util.List;
 
 
 @Controller
@@ -33,44 +37,33 @@ public class Hiber {
         return "Successful";
     }
 
-//    @RequestMapping("/add")
-//    public String addDrive(@RequestParam(value="driveID", required=true) Long driveID) {
-//
-//        EntityManagerFactory emf = Persistence.createEntityManagerFactory("mnf-pu");
-//
-//        System.err.println(emf);
-//
-//        EntityManager em = emf.createEntityManager();
-//        em.setFlushMode(FlushModeType.COMMIT);
-//
-//        em.getTransaction().begin();
-//
-//        Drive drive = new Drive(driveID, 1L, 1L, 2L, System.currentTimeMillis(), 100);
-//
-//        em.persist(drive);
-//
-//        em.getTransaction().commit();
-//
-//
-//        return "Successful";
-//    }
+    @RequestMapping("/searchDrive")
+    public @ResponseBody
+    List<Long> searchDrive(
+            @RequestParam(value="from", required=true) long from,
+            @RequestParam(value="to", required=true) long to,
+            @RequestParam(value="dateFrom", required=true) long dateFrom,
+            @RequestParam(value="dateTo", required=true) long dateTo) {
+
+        return repository.find(from, to, dateFrom, dateTo);
+    }
 
 
-//    @RequestMapping("/add_user")
-//    public String addUserToDrive(@RequestParam(value="driveID", required=true) Long driveID,
-//                           @RequestParam(value="driveID", required=true) Long userID) {
-//        EntityManagerFactory emf = Persistence.createEntityManagerFactory("mnf-pu");
-//        EntityManager em = emf.createEntityManager();
-//        em.setFlushMode(FlushModeType.COMMIT);
-//
-//        em.getTransaction().begin();
-//
-//        String s = "from Drive where id='"+driveID+"'";
-//        Drive drive = em.createQuery(s, Drive.class).getSingleResult();
-//
-//        Set<Long> users = drive.
-//
-//        return "Successful";
-//    }
+    @RequestMapping("/add_user")
+    public String addUserToDrive(
+            @RequestParam(value="driveID", required=true) Long driveID,
+            @RequestParam(value="userID", required=true) Long userID) {
+
+        Drive drive = repository.getOne(driveID);
+
+        User user = new User(userID);
+
+        drive.getJoinedUsers().add(user);
+
+        userRepository.save(user);
+
+        repository.save(drive);
+        return "Successful";
+    }
 
 }

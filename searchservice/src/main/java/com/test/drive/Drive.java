@@ -22,7 +22,7 @@ public class Drive implements Serializable {
 
     private int vacantPlaces;
 
-    @OneToMany
+    @ManyToMany
     private Set<User> joinedUsers = new HashSet<>();
 
     public Drive() {}

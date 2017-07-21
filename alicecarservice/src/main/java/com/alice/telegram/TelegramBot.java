@@ -14,17 +14,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
 import org.telegram.telegrambots.api.methods.send.SendMessage;
 import org.telegram.telegrambots.api.objects.Message;
 import org.telegram.telegrambots.api.objects.Update;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.exceptions.TelegramApiException;
 
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.GregorianCalendar;
-import java.util.List;
+import java.text.SimpleDateFormat;
+import java.util.*;
 
 
 @Component
@@ -54,6 +55,7 @@ public class TelegramBot extends TelegramLongPollingBot
         return token;
     }
 
+    private RestTemplate restTemplate = new RestTemplate();
 
     @Override
     public String getBotUsername()
@@ -154,14 +156,84 @@ public class TelegramBot extends TelegramLongPollingBot
         return text;
     }
 
+    private String getSearch(Message message) {
+        String[] strings = message.getText().split(" ");
+        String text;
+        List<String> parsedMessage = new ArrayList<>();
+
+        for (String s : strings) {
+            parsedMessage.add(s.trim());
+        }
+
+        if (parsedMessage.size() != 9) {
+            text = "Wrong amount of command args";
+        }
+        else if (!cities.getCityID(parsedMessage.get(1)).isPresent() || !cities.getCityID(parsedMessage.get(2)).isPresent()) {
+            text = "Wrong name of city. To check the names send \"/cities\"";
+        }
+        else {
+            Long from = cities.getCityID(parsedMessage.get(1)).get();
+            Long to = cities.getCityID(parsedMessage.get(2)).get();
+
+            Calendar calendar = new GregorianCalendar(Integer.parseInt(parsedMessage.get(3)),
+                    Integer.parseInt(parsedMessage.get(4)),Integer.parseInt(parsedMessage.get(5)));
+            long dateFrom = calendar.getTime().getTime();
+
+            calendar = new GregorianCalendar(Integer.parseInt(parsedMessage.get(6)),
+                    Integer.parseInt(parsedMessage.get(7)),Integer.parseInt(parsedMessage.get(8)));
+            long dateTo = calendar.getTime().getTime();
+
+            UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl("http://localhost:8282/hiber/searchDrive")
+                    .queryParam("from", from)
+                    .queryParam("to", to)
+                    .queryParam("dateFrom", dateFrom)
+                    .queryParam("dateTo", dateTo);
+
+            ResponseEntity<Long[]> responseEntityDrives = restTemplate.getForEntity(builder.build().toString(), Long[].class);
+
+            List<Long> drivesIDs = Arrays.asList(responseEntityDrives.getBody());
+
+            if (drivesIDs.isEmpty()) {
+                 text = "Nothing was found with this parameters";
+            }
+            else {
+                List<DriveView> drives = new ArrayList<>();
+
+                drivesIDs.forEach(v -> {
+                    Result<DriveView> result = driveService.getDrive(v);
+                    if (!result.isPresent()) {
+                        throw new RuntimeException("Something went really wrong: drive with ID " + v + " should be present in DB");
+                    }
+                    drives.add(result.getResult());
+                });
+
+                StringBuilder drivesText = new StringBuilder();
+                SimpleDateFormat sdf = new SimpleDateFormat("yyyy MMM dd");
+                for (DriveView drive : drives) {
+                    drivesText.append("driveID: ").append(drive.getDriveID())
+                            .append(" from: ").append(cities.getCityName(drive.getFrom()).get())
+                            .append(" to: ").append(cities.getCityName(drive.getTo()).get())
+                            .append(" vacant places: ").append(drive.getVacantPlaces())
+                            .append(" filled places: ").append(drive.getJoinedUsers().size())
+                            .append(" date: ").append(sdf.format(new Date(drive.getDate()))).append("\n");
+                }
+                text = drivesText.toString();
+            }
+        }
+        return text;
+    }
+
     private String getAllDrives(Message message) {
         StringBuilder drives = new StringBuilder();
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy MMM dd");
+
         for (DriveView drive : driveService.getAllDrives()) {
             drives.append("driveID: ").append(drive.getDriveID())
                     .append(" from: ").append(cities.getCityName(drive.getFrom()).get())
                     .append(" to: ").append(cities.getCityName(drive.getTo()).get())
                     .append(" vacant places: ").append(drive.getVacantPlaces())
-                    .append(" filled places: ").append(drive.getJoinedUsers().size()).append("\n");
+                    .append(" filled places: ").append(drive.getJoinedUsers().size())
+                    .append(" date: ").append(sdf.format(new Date(drive.getDate()))).append("\n");
         }
         return drives.toString();
     }
@@ -184,6 +256,7 @@ public class TelegramBot extends TelegramLongPollingBot
         }
         return users.toString();
     }
+
 
     private String getHelp(Message message) {
         return "To create a user send \"/create login password\".\nTo add a drive to your user send \"/add_drive yourID from_str to_str date:(yyyy mm dd) vacantPlaces\"."
@@ -239,6 +312,10 @@ public class TelegramBot extends TelegramLongPollingBot
                 text = getJoinDrive(message);
                 response.setText(text);
             }
+            else if (message.getText().startsWith("/search")) {
+                text = getSearch(message);
+                response.setText(text);
+            }
             else {
                 text = "Unknown command, please use \"/help\" to see command list";
                 response.setText(text);
@@ -254,8 +331,5 @@ public class TelegramBot extends TelegramLongPollingBot
             }
         }
     }
-
-
-
 
 }
