@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Component
@@ -25,6 +26,11 @@ public class UpdateDB {
     public void updateDrives(List<com.alice.dbclasses.drive.Drive> drives) {
         List<User> dbUsers = new ArrayList<>();
 
+        // пожалуйста, Алиса, не перемешивай функциональный стиль и императивный
+        // функциональный куда круче, на мой взгляд
+        List<User> users = drives.stream().map(com.alice.dbclasses.drive.Drive::getJoinedUsers).flatMap(Set::stream)
+                .map(User::new).collect(Collectors.toList());
+
         drives.forEach(drive -> dbUsers.addAll(
                 drive.getJoinedUsers().stream().map(User::new).collect(Collectors.toList())));
         userRepository.save(dbUsers);
@@ -33,6 +39,8 @@ public class UpdateDB {
 
         dbDrives.addAll(drives.stream().
                 map(drive -> {
+                    // тут хорошо зайдет функция из драйва в драйв
+                    // a-ля .map(this::convertDrive).collect...
                     Drive dbDrive = new Drive(drive.getDriveID(), drive.getUserID(),
                             drive.getFrom(), drive.getTo(), drive.getDate(), drive.getVacantPlaces());
                     dbDrive.setJoinedUsers(drive.getJoinedUsers().stream().map(User::new).collect(Collectors.toSet()));

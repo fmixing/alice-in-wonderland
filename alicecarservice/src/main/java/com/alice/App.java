@@ -16,7 +16,7 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 @EnableScheduling
 @PropertySources({
         @PropertySource(value = "telegram.properties"),
-        @PropertySource(value = "consumer.properties"),
+        // to remove? @PropertySource(value = "consumer.properties"),
         @PropertySource(value = "producer.properties")
 })
 public class App

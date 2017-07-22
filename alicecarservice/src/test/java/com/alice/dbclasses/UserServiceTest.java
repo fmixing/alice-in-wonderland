@@ -17,6 +17,9 @@ import static org.junit.Assert.*;
 
 public class UserServiceTest {
 
+    // Тест тервиса в 99% случаев интеграционный... Уметь писать такие тесты полезно...
+    // Но я, например, не умею :) если научишься -- научи и меня, но это совсем не приоритетная задача
+
     private UserDAO userDAO = new UserDAOImpl(null, null);
     private LogPassService logPassService = new LogPassService();
     private UpdateDB updateDB = new UpdateDB();

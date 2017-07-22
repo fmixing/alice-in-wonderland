@@ -17,6 +17,7 @@ import java.util.Collections;
 import java.util.Properties;
 
 @Component
+// я думаю надо выпилить?
 public class Receiver {
 
     private static final Logger logger = LoggerFactory.getLogger(Receiver.class);

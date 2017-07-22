@@ -46,6 +46,8 @@ public class Sender {
         updateDB.sendUpdateDrives((id, drive) -> {
             ProducerRecord<String, byte[]> record = new ProducerRecord<>(KafkaTopics.updateDrives, drive);
 
+            // попробуй тут швырнуть ошибку -- не разорвет ли спрингбутовый шедулер
+            // от этого? он вполне может перестать что-либо делать после первого эксепшна...
             return producer.send(record, (metadata, e) -> {
                 if (e != null) {
                     logger.error("Error occurred while sending drive update with id='{}' to topic='{}'", id, KafkaTopics.updateDrives);

@@ -25,6 +25,8 @@ import static org.junit.Assert.*;
 
 public class DriveServiceTest {
 
+    // надо либо замокать это насмерть, либо превратить в интеграционный спринг-бутовый тест с базой,
+    // либо выпилить тест нахрен... решать тебе :)
     private DriveDAO driveDAO = new DriveDAOImpl(null, null);
     private UserDAO userDAO = new UserDAOImpl(null, null);
     private UpdateDB updateDB = new UpdateDB();
