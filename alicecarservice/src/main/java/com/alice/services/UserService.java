@@ -4,7 +4,9 @@ import com.alice.dbclasses.UpdateDB;
 import com.alice.dbclasses.user.UserDAO;
 import com.alice.dbclasses.user.UserView;
 import com.alice.utils.Result;
+import com.codahale.metrics.JmxReporter;
 import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.SharedMetricRegistries;
 import com.codahale.metrics.Timer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
@@ -31,7 +33,10 @@ public class UserService {
         this.userDAO = userDAO;
         this.logPassService = logPassService;
         this.updateDB = updateDB;
-        registry = new MetricRegistry();
+        // это статический метод, можно положить его в абстрактный класс CommonMetrics, или бином сделать или что-то ещё
+        // 100500 раз писать одно и тоже как-то не вдохноялет
+        this.registry = SharedMetricRegistries.getOrCreate("userservice");
+        JmxReporter.forRegistry(registry).build().start();
     }
 
     /**
@@ -73,6 +78,9 @@ public class UserService {
      * error message if a user with this ID doesn't exist
      */
     public Result<UserView> getUser(long ID) {
+        // getTimerByName?
+        // можно вообще написать статику вида CommonMetrics.getTimer(Clazz, Name)
+        // будет удобнее :)
         final Timer timer = registry.timer(name(UserService.class, "getUser-request"));
 
         final Timer.Context context = timer.time();

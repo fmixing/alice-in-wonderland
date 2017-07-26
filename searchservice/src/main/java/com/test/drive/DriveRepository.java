@@ -24,6 +24,7 @@ public interface DriveRepository extends JpaRepository<Drive, Long> {
      * Finds all the drives which dates are greater that or equal to dateF
      * and less that or equal to dateT
      */
+    // зачем пробелов нет в d.date<=:dateT ?
     @Query("select d from Drive d where d.date<=:dateT and d.date>=:dateF")
     List<Drive> find(@Param("dateF") Long dateF,
                      @Param("dateT") Long dateT);

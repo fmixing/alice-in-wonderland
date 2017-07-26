@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component;
 import java.util.Properties;
 
 @Component
+// wtf?
 public class
 Sender {
 

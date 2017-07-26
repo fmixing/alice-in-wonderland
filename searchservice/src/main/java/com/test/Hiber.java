@@ -16,6 +16,7 @@ import java.util.stream.Collectors;
 
 @Controller
 @RequestMapping("/hiber")
+// пора его переименовать, нам же нужно пушить в мастер :)
 public class Hiber {
 
     @Autowired
@@ -91,6 +92,7 @@ public class Hiber {
         return Optional.of(timeInterval);
     }
 
+    // мне кажется этому классу стоило бы быть отдельным классом... наверняка кому-то ещё понядобится)
     private class TimeInterval {
         Long from;
         Long to;

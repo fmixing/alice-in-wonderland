@@ -27,15 +27,17 @@ import java.util.stream.Collectors;
 import static com.googlecode.cqengine.stream.StreamFactory.streamOf;
 
 @Component
+// нужно более приятное название :)
 public class Cache {
 
     /**
      * Amount of days contained in cache starting the current day
      */
-    private static final int cacheAmountOfDays = 10;
+    private final int cacheAmountOfDays = 10;
 
     private final DriveRepository repository;
 
+    // нафига статика?
     private static final Attribute<Drive, Long> FROM = attribute("from", Drive::getFrom);
     private static final Attribute<Drive, Long> TO = attribute("to", Drive::getTo);
     private static final Attribute<Drive, Long> DATE = attribute("date", Drive::getDate);
@@ -43,8 +45,9 @@ public class Cache {
 
     private final IndexedCollection<Drive> drivesCache = new ConcurrentIndexedCollection<>(OnHeapPersistence.onPrimaryKey(ID));
 
-    private long dateFrom;
-    private long dateTo;
+    // меняется и читается в разных потоках
+    private volatile long dateFrom;
+    private volatile long dateTo;
 
     @Autowired
     public Cache(DriveRepository repository) {

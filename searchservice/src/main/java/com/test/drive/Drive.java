@@ -26,6 +26,7 @@ public class Drive implements Serializable {
     @ManyToMany
     private Set<User> joinedUsers = new HashSet<>();
 
+    // delete me?
     public Drive() {}
 
 

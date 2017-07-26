@@ -25,6 +25,7 @@ public class LogPassService {
     public Optional<Long> getIDForUser(String login, String password) {
         Long userID;
         try {
+            // почему like? чем плох == ?
             jdbcTemplate.queryForObject("select id from logpass where log like ?", Long.class, login);
         } catch (EmptyResultDataAccessException e) {
             userID = jdbcTemplate.queryForObject("select nextval('users_ids')", Long.class);

@@ -15,6 +15,7 @@ public class ClientApp {
 
     public static void main(String[] args) {
 
+        // вытащи их в отдельные main-ы
 //        new TestConcurrent(1).run();
 
 //        new com.test.TestCorrectness();
