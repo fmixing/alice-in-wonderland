@@ -1,7 +1,9 @@
 package com.test.kafka;
 
 import com.test.db.UpdateDB;
+import com.alice.kafka.KafkaTopics;
 import org.apache.commons.lang3.SerializationUtils;
+import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,25 +11,27 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Properties;
+import java.util.*;
 
-import com.google.common.base.Throwables;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
+
+import static com.alice.kafka.TopicPartitions.drivesTopicPartition;
 
 @Component
 public class Receiver {
 
     private static final Logger logger = LoggerFactory.getLogger(Receiver.class);
 
-    public static final String updateDrives = "drives_updates";
-
+    /**
+     * The amount of drives that should be processed as a transaction
+     */
     private static final int transactionSize = 100;
 
+    /**
+     * Kafka's consumer properties
+     */
     private final Properties props;
 
     private final KafkaConsumer<String, byte[]> consumer;
@@ -36,6 +40,9 @@ public class Receiver {
 
     private final UpdateDB updateDB;
 
+    /**
+     * The timeout to Kafka's consumer poll method
+     */
     @Value("${consumer.poll.timeout}")
     private long pollTimeout = 1000;
 
@@ -49,7 +56,7 @@ public class Receiver {
         props.put("key.deserializer", environment.getProperty("consumer.key.deserializer"));
         props.put("value.deserializer", environment.getProperty("consumer.value.deserializer"));
         consumer = new KafkaConsumer<>(props);
-        consumer.subscribe(Collections.singletonList(updateDrives));
+        consumer.subscribe(Collections.singletonList(KafkaTopics.updateDrives));
 
         this.updateDB = updateDB;
 
@@ -59,6 +66,9 @@ public class Receiver {
     }
 
 
+    /**
+     * Thread that polls data from Kafka's buffer with {@code pollTimeout} timeout and process them
+     */
     private class ConsumerThread extends Thread {
 
         ConsumerThread(String name) {
@@ -66,8 +76,8 @@ public class Receiver {
         }
 
         public void run() {
-            try {
-                while (!Thread.currentThread().isInterrupted()) {
+            while (!Thread.currentThread().isInterrupted()) {
+                try {
                     ConsumerRecords<String, byte[]> records = consumer.poll(pollTimeout);
 
                     List<com.alice.dbclasses.drive.Drive> drives = new ArrayList<>();
@@ -80,26 +90,56 @@ public class Receiver {
 
                         if (drives.size() < transactionSize) {
                             drives.add(drive);
-                        }
-                        else {
+                        } else {
                             updateDB.updateDrives(drives);
+
+                            Long committedOffset = getCommittedOffset();
+                            consumer.commitSync(Collections.singletonMap(drivesTopicPartition,
+                                    new OffsetAndMetadata(committedOffset + drives.size())));
                             drives.clear();
                             drives.add(drive);
                         }
                     }
                     if (!drives.isEmpty()) {
                         updateDB.updateDrives(drives);
-                        drives.clear();
                     }
                     consumer.commitSync();
+                } catch (Exception e) {
+                    logger.error("ConsumerThread: error occurred while polling data", e);
+                    seekOffset();
                 }
-            } catch (Exception e) {
-                Throwables.propagate(e);
-            } finally {
-                consumer.close();
+            }
+            consumer.close();
+        }
+
+        /**
+         * Tries to seek the last offset that will be used by poll method,
+         * does it until the attempt is successful or the thread is interrupted
+         */
+        private void seekOffset() {
+            while (!Thread.currentThread().isInterrupted()) {
+                try {
+                    consumer.seek(drivesTopicPartition, getCommittedOffset());
+                    break;
+                } catch (Exception e1) {
+                    logger.error("ConsumerThread: error occurred while seeking offset", e1);
+                    try {
+                        Thread.sleep(1000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
             }
         }
 
+    }
+
+    /**
+     * Gets the last committed offset of the {@code drivesTopicPartition}
+     */
+    private Long getCommittedOffset() {
+        OffsetAndMetadata committed = consumer.committed(drivesTopicPartition);
+        return Optional.ofNullable(committed).map(OffsetAndMetadata::offset).orElse(0L);
     }
 
 }

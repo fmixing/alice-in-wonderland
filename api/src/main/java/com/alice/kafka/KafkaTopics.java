@@ -1,4 +1,4 @@
-package com.alice.kafkaclasses;
+package com.alice.kafka;
 
 public class KafkaTopics {
 

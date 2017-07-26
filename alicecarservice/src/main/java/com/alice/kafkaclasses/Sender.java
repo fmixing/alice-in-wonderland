@@ -1,6 +1,7 @@
 package com.alice.kafkaclasses;
 
 import com.alice.dbclasses.UpdateDB;
+import com.alice.kafka.KafkaTopics;
 import com.google.common.base.Throwables;
 import org.apache.kafka.clients.producer.*;
 import org.slf4j.Logger;
@@ -13,7 +14,8 @@ import org.springframework.stereotype.Component;
 import java.util.Properties;
 
 @Component
-public class Sender {
+public class
+Sender {
 
     private static final Logger logger = LoggerFactory.getLogger(Sender.class);
 

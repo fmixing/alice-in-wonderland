@@ -39,11 +39,18 @@ public class CitiesService {
 
 
     /**
-     * @param ID which
+     * @param ID ID of a city
      * @return an {@code Optional} object which contains city name if the city with this ID exists,
      * an empty Optional otherwise
      */
     public Optional<String> getCityName(long ID) {
         return Optional.ofNullable(cities.inverse().get(ID));
+    }
+
+    /**
+     * @return Map contains cities names and their IDs
+     */
+    public Map<String, Long> getCitiesWithId() {
+        return cities;
     }
 }

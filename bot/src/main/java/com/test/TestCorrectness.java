@@ -1,7 +1,12 @@
+package com.test;
+
+import com.test.clientclasses.Drive;
+import com.test.clientclasses.ResultDrive;
+import com.test.clientclasses.ResultUser;
+import com.test.clientclasses.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -82,18 +87,18 @@ public class TestCorrectness {
 
         for (User user : users) {
             for (Long driveID : user.getJoinedDrives()) {
-                if (!drivesMap.get(driveID).joinedUsers.contains(user.userID))
-                    throw new RuntimeException("UserID " +user.userID + ", driveID " + driveID);
+                if (!drivesMap.get(driveID).getJoinedUsers().contains(user.getUserID()))
+                    throw new RuntimeException("UserID " +user.getUserID() + ", driveID " + driveID);
             }
         }
 
         for (Drive drive : drives) {
             for (Long userID : drive.getJoinedUsers()) {
-                if (!usersMap.get(userID).joinedDrives.contains(drive.driveID))
-                    throw new RuntimeException("DriveID " +drive.driveID + ", userID " + userID);
+                if (!usersMap.get(userID).getJoinedDrives().contains(drive.getDriveID()))
+                    throw new RuntimeException("DriveID " +drive.getDriveID() + ", userID " + userID);
             }
-            if (drive.joinedUsers.size() > drive.vacantPlaces)
-                throw new RuntimeException("DriveID " + drive.driveID);
+            if (drive.getJoinedUsers().size() > drive.getVacantPlaces())
+                throw new RuntimeException("DriveID " + drive.getDriveID());
         }
 
 
@@ -119,31 +124,26 @@ public class TestCorrectness {
                     .queryParam("login", "aaa" + i)
                     .queryParam("password", "bbb");
 
-            ResultUser resultUser = null;
+            ResultUser resultUser;
 
-            boolean sent = false;
-
-            while (!sent) {
+            while (true) {
                 try {
                     resultUser = restTemplate.getForObject(builder.build().toString(), ResultUser.class);
-
-                    if (resultUser.hasMessage()) {
-                        logger.info("Request: create user, got an error : '{}', time spent on request = {}", resultUser.getMessage());
-                    } else {
-                        logger.info("Request: create user, got a user : '{}', time spent on request = {}", resultUser.getJsonUser());
-                    }
-                    sent = true;
+                    break;
                 } catch (Exception e) {
                     logger.error("Request: join drive, got an exception : '{}'", e.getMessage());
                 }
             }
 
-            GregorianCalendar calendar = new GregorianCalendar();
-            int year = randBetween(2017, 2018);
-            calendar.set(GregorianCalendar.YEAR, year);
-            int dayOfYear = randBetween(1, calendar.getActualMaximum(GregorianCalendar.DAY_OF_YEAR));
-            calendar.set(GregorianCalendar.DAY_OF_YEAR, dayOfYear);
-            long date = calendar.getTime().getTime();
+            Objects.requireNonNull(resultUser);
+
+            if (resultUser.hasMessage()) {
+                logger.info("Request: create user, got an error : '{}', time spent on request = {}", resultUser.getMessage());
+            } else {
+                logger.info("Request: create user, got a user : '{}', time spent on request = {}", resultUser.getJsonUser());
+            }
+
+            long date = getRandomDate();
 
             builder = UriComponentsBuilder.fromHttpUrl("http://localhost:8181/api/drives/create_JSON")
                     .queryParam("userID", resultUser.getJsonUser().getUserID())
@@ -152,25 +152,37 @@ public class TestCorrectness {
                     .queryParam("vacantPlaces", 2)
                     .queryParam("date", date);
 
-            sent = false;
+            ResultDrive resultDrive;
 
-            while (!sent) {
-
+            while (true) {
                 try {
-                    ResultDrive resultDrive = restTemplate.getForObject(builder.build().toString(), ResultDrive.class);
-
-                    if (resultDrive.hasMessage()) {
-                        logger.info("Request: create drive, got an error : '{}', time spent on request = {}", resultDrive.getMessage());
-                    } else {
-                        logger.info("Request: create drive, got a drive : '{}', time spent on request = {}",
-                                resultDrive.getJsonDrive());
-                    }
-                    sent = true;
+                    resultDrive = restTemplate.getForObject(builder.build().toString(), ResultDrive.class);
+                    break;
                 } catch (Exception e) {
                     logger.error("Request: join drive, got an exception : '{}'", e.getMessage());
                 }
             }
+
+            Objects.requireNonNull(resultDrive);
+
+            if (resultDrive.hasMessage()) {
+                logger.info("Request: create drive, got an error : '{}', time spent on request = {}", resultDrive.getMessage());
+            } else {
+                logger.info("Request: create drive, got a drive : '{}', time spent on request = {}",
+                        resultDrive.getJsonDrive());
+            }
+
+
         }
+    }
+
+    private long getRandomDate() {
+        GregorianCalendar calendar = new GregorianCalendar();
+        int year = randBetween(2017, 2018);
+        calendar.set(GregorianCalendar.YEAR, year);
+        int dayOfYear = randBetween(1, calendar.getActualMaximum(GregorianCalendar.DAY_OF_YEAR));
+        calendar.set(GregorianCalendar.DAY_OF_YEAR, dayOfYear);
+        return calendar.getTime().getTime();
     }
 
 
@@ -202,34 +214,37 @@ public class TestCorrectness {
 
             for (int i = 0; i < drives.size(); i++) {
 
-                boolean sent = false;
-
                 drive = drives.get((rand + i) % drives.size());
 
                 builder = UriComponentsBuilder.fromHttpUrl("http://localhost:8181/api/drives/join_drive_JSON")
                         .queryParam("userID", userID)
-                        .queryParam("driveID", drive.driveID);
+                        .queryParam("driveID", drive.getDriveID());
 
                 logger.info("Request: join drive, url : '{}'", builder.build().toString());
 
-                while (!sent) {
 
-                    ResultDrive resultDrive = null;
+                ResultDrive resultDrive;
+
+                while (true) {
                     try {
                         resultDrive = restTemplate.getForObject(builder.build().toString(), ResultDrive.class);
-                        if (resultDrive.hasResult()) {
-                            logger.info("Request: join drive, got a drive : '{}'", resultDrive.getJsonDrive());
-                        } else {
-                            if (resultDrive.getMessage().equals("User can't join to a drive which they created")) {
-                                posted = true;
-                            }
-                            logger.info("Request: join drive, got an error : '{}'", resultDrive.getMessage());
-                        }
-                        sent = true;
+                        break;
                     } catch (Exception e) {
                         logger.error("Request: join drive, got an exception : '{}'", e.getMessage());
                     }
                 }
+
+                Objects.requireNonNull(resultDrive);
+
+                if (resultDrive.hasResult()) {
+                    logger.info("Request: join drive, got a drive : '{}'", resultDrive.getJsonDrive());
+                } else {
+                    if (resultDrive.getMessage().equals("User can't join to a drive which they created")) {
+                        posted = true;
+                    }
+                    logger.info("Request: join drive, got an error : '{}'", resultDrive.getMessage());
+                }
+
 
             }
 

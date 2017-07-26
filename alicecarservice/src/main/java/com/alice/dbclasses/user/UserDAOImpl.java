@@ -129,7 +129,12 @@ public class UserDAOImpl implements UserDAO {
      */
     @Override
     public void putToCache(User user) {
-        selfPopulatingCache.putIfAbsent(new Element(user.getUserID(), user));
+        usersLockCache.acquireReadLockOnKey(user.getUserID());
+        try {
+            selfPopulatingCache.putIfAbsent(new Element(user.getUserID(), user));
+        } finally {
+            usersLockCache.releaseReadLockOnKey(user.getUserID());
+        }
     }
 
     /**

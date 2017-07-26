@@ -1,3 +1,5 @@
+package com.test.clientclasses;
+
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import java.util.Set;
@@ -5,19 +7,19 @@ import java.util.Set;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class Drive {
 
-    Long driveID;
+    private Long driveID;
 
-    Long userID;
+    private Long userID;
 
-    Long from;
+    private Long from;
 
-    Long to;
+    private Long to;
 
-    Long date;
+    private Long date;
 
-    int vacantPlaces;
+    private int vacantPlaces;
 
-    Set<Long> joinedUsers;
+    private Set<Long> joinedUsers;
 
     public Long getDriveID() {
         return driveID;

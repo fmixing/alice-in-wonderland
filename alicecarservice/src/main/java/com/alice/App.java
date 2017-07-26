@@ -15,8 +15,6 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 @EnableCaching
 @EnableScheduling
 @PropertySources({
-        @PropertySource(value = "telegram.properties"),
-        @PropertySource(value = "consumer.properties"),
         @PropertySource(value = "producer.properties")
 })
 public class App

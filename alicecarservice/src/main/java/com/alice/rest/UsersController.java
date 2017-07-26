@@ -83,7 +83,7 @@ public class UsersController {
             @RequestParam(value="login", required=true) String login,
             @RequestParam(value="password", required=true) String password) {
 
-        Optional<Long> ID = null;
+        Optional<Long> ID;
         try {
             ID = logPassService.getUserID(login, password);
         } catch (Exception e) {

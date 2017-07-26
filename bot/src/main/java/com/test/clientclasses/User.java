@@ -1,14 +1,16 @@
+package com.test.clientclasses;
+
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import java.util.Set;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class User {
-    Long userID;
+    private Long userID;
 
-    Set<Long> postedDrives;
+    private Set<Long> postedDrives;
 
-    Set<Long> joinedDrives;
+    private Set<Long> joinedDrives;
 
     public Long getUserID() {
         return userID;

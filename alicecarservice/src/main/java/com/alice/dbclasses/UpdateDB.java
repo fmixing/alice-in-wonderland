@@ -90,7 +90,7 @@ public class UpdateDB {
                 try {
                     future.get();
                 } catch (Exception e) {
-                    Throwables.propagate(e);
+                    throw Throwables.propagate(e);
                 }
             }
         }

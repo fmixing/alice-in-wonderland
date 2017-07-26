@@ -3,6 +3,7 @@ package com.test.drive;
 import javax.persistence.*;
 import java.io.Serializable;
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 
 @Entity
@@ -91,5 +92,32 @@ public class Drive implements Serializable {
 
     public void setJoinedUsers(Set<User> joinedUsers) {
         this.joinedUsers = joinedUsers;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Drive drive = (Drive) o;
+        return id == drive.id;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
+    }
+
+    @Override
+    public String toString() {
+        final StringBuilder sb = new StringBuilder("Drive{");
+        sb.append("id=").append(id);
+        sb.append(", userID=").append(userID);
+        sb.append(", fromTown=").append(fromTown);
+        sb.append(", toTown=").append(toTown);
+        sb.append(", date=").append(date);
+        sb.append(", vacantPlaces=").append(vacantPlaces);
+        sb.append(", joinedUsers=").append(joinedUsers);
+        sb.append('}');
+        return sb.toString();
     }
 }

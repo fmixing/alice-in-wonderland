@@ -41,7 +41,7 @@ public class DriveDAOImpl implements DriveDAO {
         selfPopulatingCache = new SelfPopulatingCache(driversCache, key ->
                 SerializationUtils.deserialize(jdbcTemplate.queryForObject("select blob from drives where id = ?",
                         byte[].class, (Long) key)));
-        drivesLockCache = cacheManager.getCache("drivesLockCache");
+        drivesLockCache = Objects.requireNonNull(cacheManager.getCache("drivesLockCache"));
     }
 
 
@@ -133,7 +133,12 @@ public class DriveDAOImpl implements DriveDAO {
      */
     @Override
     public void putToCache(Drive drive) {
-        selfPopulatingCache.putIfAbsent(new Element(drive.getDriveID(), drive));
+        drivesLockCache.acquireReadLockOnKey(drive.getDriveID());
+        try {
+            selfPopulatingCache.putIfAbsent(new Element(drive.getDriveID(), drive));
+        } finally {
+            drivesLockCache.releaseReadLockOnKey(drive.getDriveID());
+        }
     }
 
 

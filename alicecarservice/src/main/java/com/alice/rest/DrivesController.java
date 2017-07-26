@@ -11,7 +11,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
+import java.util.List;
 
 @Controller
 @RequestMapping("/api/drives")
@@ -99,7 +102,10 @@ public class DrivesController {
     public @ResponseBody
     Collection<DriveView> getAllJSON(Model model) {
 
-        return driveService.getAllDrives();
+        List<DriveView> allDrives = new ArrayList<>(driveService.getAllDrives());
+        allDrives.sort(Comparator.comparing(DriveView::getDate));
+
+        return allDrives;
     }
 
 }

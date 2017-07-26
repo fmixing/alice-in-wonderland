@@ -1,10 +1,11 @@
+package com.test.clientclasses;
+
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
+public class ResultUser {
 
-public class ResultDrive {
-
-    Drive jsonDrive;
+    User jsonUser;
 
     String message;
 
@@ -15,17 +16,9 @@ public class ResultDrive {
     }
 
     public boolean hasResult() {
-        if (jsonDrive != null)
+        if (jsonUser != null)
             return true;
         return false;
-    }
-
-    public Drive getJsonDrive() {
-        return jsonDrive;
-    }
-
-    public void setJsonDrive(Drive jsonDrive) {
-        this.jsonDrive = jsonDrive;
     }
 
     public String getMessage() {
@@ -36,10 +29,18 @@ public class ResultDrive {
         this.message = message;
     }
 
+    public User getJsonUser() {
+        return jsonUser;
+    }
+
+    public void setJsonUser(User jsonUser) {
+        this.jsonUser = jsonUser;
+    }
+
     @Override
     public String toString() {
         return "Result{" +
-                "jsonDrive=" + jsonDrive +
+                "jsonUser=" + jsonUser +
                 '}';
     }
 }

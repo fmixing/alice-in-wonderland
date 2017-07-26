@@ -1,7 +1,12 @@
+package com.test;
+
+import com.test.clientclasses.Drive;
+import com.test.clientclasses.ResultDrive;
+import com.test.clientclasses.ResultUser;
+import com.test.clientclasses.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -25,8 +30,6 @@ public class TestConcurrent {
         for (int i = 0; i < count; i++) {
             clientThreads.add(new ClientThread("test" + (i + 1)));
         }
-
-//        clientThreads.forEach(v -> v.setDaemon(true));
     }
 
     public void run() {
@@ -47,7 +50,6 @@ public class TestConcurrent {
         UriComponentsBuilder builder;
         Long timeBefore;
         Long timeAfter;
-        boolean sent = false;
 
 
         ClientThread(String name) {
@@ -76,9 +78,9 @@ public class TestConcurrent {
 
                 Drive driveJoin = drives.get(random.nextInt(drives.size()));
 
-                joinDrive(user.getJsonUser().getUserID(), driveJoin.driveID);
+                joinDrive(user.getJsonUser().getUserID(), driveJoin.getDriveID());
 
-                getDrive(driveJoin.driveID);
+                getDrive(driveJoin.getDriveID());
                 getUser(user.getJsonUser().getUserID());
                 getUsers();
 
@@ -102,18 +104,17 @@ public class TestConcurrent {
                     .queryParam("login", login)
                     .queryParam("password", "bbb");
 
-            ResponseEntity<Optional> responseEntity = null;
+            ResponseEntity<Optional> responseEntity;
 
-            Long ID = null;
-            sent = false;
+            Long ID;
 
-            while (!sent) {
+            while (true) {
                 try {
                     timeBefore = System.currentTimeMillis();
                     responseEntity = restTemplate.getForEntity(builder.build().toString(), Optional.class);
                     if (responseEntity.getBody().isPresent()) {
                         ID = (Long) responseEntity.getBody().get();
-                        sent = true;
+                        break;
                     }
                 } catch (Exception e) {
                     logger.error("Request: get user ID, got an exception : '{}'", e.getMessage());
@@ -133,14 +134,13 @@ public class TestConcurrent {
                     .queryParam("login", log)
                     .queryParam("password", "bbb");
 
-            ResultUser resultUser = null;
-            sent = false;
+            ResultUser resultUser;
 
-            while (!sent) {
+            while (true) {
                 try {
                     timeBefore = System.currentTimeMillis();
                     resultUser = restTemplate.getForObject(builder.build().toString(), ResultUser.class);
-                    sent = true;
+                    break;
                 } catch (Exception e) {
                     logger.error("Request: create user, got an exception : '{}'", e.getMessage());
                 }
@@ -163,15 +163,13 @@ public class TestConcurrent {
             builder = UriComponentsBuilder.fromHttpUrl("http://localhost:8181/api/users/get_JSON")
                     .queryParam("id", userID);
 
-            ResultUser resultUser = null;
+            ResultUser resultUser;
 
-            sent = false;
-
-            while (!sent) {
+            while (true) {
                 try {
                     timeBefore = System.currentTimeMillis();
                     resultUser = restTemplate.getForObject(builder.build().toString(), ResultUser.class);
-                    sent = true;
+                    break;
                 } catch (Exception e) {
                     logger.error("Request: get user, got an exception : '{}'", e.getMessage());
                 }
@@ -191,18 +189,16 @@ public class TestConcurrent {
         }
 
         private List<User> getUsers() {
-            timeBefore = System.currentTimeMillis();
 
             builder = UriComponentsBuilder.fromHttpUrl("http://localhost:8181/api/users/get_all_JSON");
 
-            ResponseEntity<User[]> responseEntity = null;
+            ResponseEntity<User[]> responseEntity;
 
-            sent = false;
-
-            while (!sent) {
+            while (true) {
                 try {
+                    timeBefore = System.currentTimeMillis();
                     responseEntity = restTemplate.getForEntity(builder.build().toString(), User[].class);
-                    sent = true;
+                    break;
                 } catch (Exception e) {
                     logger.error("Request: get all users, got an exception : '{}'", e.getMessage());
                 }
@@ -222,15 +218,13 @@ public class TestConcurrent {
             builder = UriComponentsBuilder.fromHttpUrl("http://localhost:8181/api/drives/get_JSON")
                     .queryParam("driveID", driveID);
 
-            ResultDrive resultDrive = null;
+            ResultDrive resultDrive;
 
-            sent = false;
-
-            while (!sent) {
+            while (true) {
                 try {
                     timeBefore = System.currentTimeMillis();
                     resultDrive = restTemplate.getForObject(builder.build().toString(), ResultDrive.class);
-                    sent = true;
+                    break;
                 } catch (Exception e) {
                     logger.error("Request: get drive, got an exception : '{}'", e.getMessage());
                 }
@@ -255,14 +249,13 @@ public class TestConcurrent {
                     .queryParam("userID", userID)
                     .queryParam("driveID", driveID);
 
-            ResultDrive resultDrive = null;
-            sent = false;
+            ResultDrive resultDrive;
 
-            while (!sent) {
+            while (true) {
                 try {
                     timeBefore = System.currentTimeMillis();
                     resultDrive = restTemplate.getForObject(builder.build().toString(), ResultDrive.class);
-                    sent = true;
+                    break;
                 } catch (Exception e) {
                     logger.error("Request: join drive, got an exception : '{}'", e.getMessage());
                 }
@@ -286,15 +279,13 @@ public class TestConcurrent {
 
             builder = UriComponentsBuilder.fromHttpUrl("http://localhost:8181/api/drives/get_all_JSON");
 
-            ResponseEntity<Drive[]> responseEntity = null;
+            ResponseEntity<Drive[]> responseEntity;
 
-            sent = false;
-
-            while (!sent) {
+            while (true) {
                 try {
                     timeBefore = System.currentTimeMillis();
                     responseEntity = restTemplate.getForEntity(builder.build().toString(), Drive[].class);
-                    sent = true;
+                    break;
                 } catch (Exception e) {
                     logger.error("Request: get all drives, got an exception : '{}'", e.getMessage());
                 }
@@ -325,18 +316,15 @@ public class TestConcurrent {
                     .queryParam("vacantPlaces", 2)
                     .queryParam("date", date);
 
-            ResultDrive resultDrive = null;
+            ResultDrive resultDrive;
 
-            sent = false;
-            while (!sent) {
+            while (true) {
                 try {
                     timeBefore = System.currentTimeMillis();
                     resultDrive = restTemplate.getForObject(builder.build().toString(), ResultDrive.class);
-                    sent = true;
+                    break;
                 } catch (Exception e) {
                     logger.error("Request: create drive, got an exception : '{}'", e.getMessage());
-
-                    e.printStackTrace();
                 }
             }
 

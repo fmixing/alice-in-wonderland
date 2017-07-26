@@ -51,18 +51,18 @@
 
     </appender>
 
-    <logger name="TestConcurrent" level="info" additivity="false">
-        <!--<appender-ref ref="STDOUT" />-->
+    <logger name="com.test.TestConcurrent" level="info" additivity="false">
+        <appender-ref ref="STDOUT" />
         <appender-ref ref="FILECONC" />
     </logger>
 
-    <logger name="TestCorrectness" level="info" additivity="false">
+    <logger name="com.test.TestCorrectness" level="info" additivity="false">
         <!--<appender-ref ref="STDOUT" />-->
         <appender-ref ref="FILECORR" />
     </logger>
 
 
-    <root level="error">
+    <root level="info">
         <appender-ref ref="STDOUT" />
     </root>
 

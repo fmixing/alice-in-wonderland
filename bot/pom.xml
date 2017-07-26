@@ -16,6 +16,17 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
+
+        <dependency>
+            <groupId>com.github.xabgesagtx</groupId>
+            <artifactId>telegram-spring-boot-starter</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.telegram</groupId>
+            <artifactId>telegrambotsextensions</artifactId>
+        </dependency>
+
     </dependencies>
 
 </project>
