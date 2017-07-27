@@ -1,9 +1,12 @@
 package com.test;
 
-import com.test.cache.Cache;
-import com.test.drive.Drive;
-import com.test.drive.DriveRepository;
-import com.test.drive.UserRepository;
+import com.alice.utils.CommonMetrics;
+import com.codahale.metrics.*;
+import com.codahale.metrics.Timer;
+import com.test.cache.DrivesSearchCache;
+import com.test.dbclasses.Drive;
+import com.test.dbclasses.DriveRepository;
+import com.test.dbclasses.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -16,7 +19,7 @@ import java.util.stream.Collectors;
 
 @Controller
 @RequestMapping("/hiber")
-public class Hiber {
+public class SearchService {
 
     @Autowired
     private DriveRepository repository;
@@ -25,7 +28,7 @@ public class Hiber {
     private UserRepository userRepository;
 
     @Autowired
-    private Cache cache;
+    private DrivesSearchCache drivesSearchCache;
 
     /**
      * @param from the required starting point of drives
@@ -43,25 +46,31 @@ public class Hiber {
             @RequestParam(value="dateFrom", required=true) long dateFrom,
             @RequestParam(value="dateTo", required=true) long dateTo) {
 
-        List<Long> drives = new ArrayList<>();
+        final Timer.Context context = CommonMetrics.getTimerContext(SearchService.class,"search-request");
 
-        long cacheDateFrom = cache.getDateFrom();
-        long cacheDateTo = cache.getDateTo();
+        try {
+            List<Long> drives = new ArrayList<>();
 
-        Optional<TimeInterval> timeIntervalFromCache = intersectTimeIntervals(dateFrom, dateTo, cacheDateFrom, cacheDateTo);
+            long cacheDateFrom = drivesSearchCache.getDateFrom();
+            long cacheDateTo = drivesSearchCache.getDateTo();
 
-        if (timeIntervalFromCache.isPresent())
-            drives = cache.getDrives(from, to, timeIntervalFromCache.get().from, timeIntervalFromCache.get().to)
-                    .stream().map(Drive::getDriveID).collect(Collectors.toList());
+            Optional<TimeInterval> timeIntervalFromCache = intersectTimeIntervals(dateFrom, dateTo, cacheDateFrom, cacheDateTo);
 
-        Optional<TimeInterval> timeIntervalFromDB = subtractTimeIntervals(dateFrom, dateTo, cacheDateFrom, cacheDateTo);
+            if (timeIntervalFromCache.isPresent())
+                drives = drivesSearchCache.getDrives(from, to, timeIntervalFromCache.get().from, timeIntervalFromCache.get().to)
+                        .stream().map(Drive::getDriveID).collect(Collectors.toList());
 
-        if (timeIntervalFromDB.isPresent()) {
-            drives.addAll(repository.find(from, to, timeIntervalFromDB.get().from, timeIntervalFromDB.get().to)
-                    .stream().map(Drive::getDriveID).collect(Collectors.toList()));
+            Optional<TimeInterval> timeIntervalFromDB = subtractTimeIntervals(dateFrom, dateTo, cacheDateFrom, cacheDateTo);
+
+            if (timeIntervalFromDB.isPresent()) {
+                drives.addAll(repository.find(from, to, timeIntervalFromDB.get().from, timeIntervalFromDB.get().to)
+                        .stream().map(Drive::getDriveID).collect(Collectors.toList()));
+            }
+
+            return drives;
+        } finally {
+            context.stop();
         }
-
-        return drives;
     }
 
 

@@ -1,6 +1,8 @@
 package com.alice.services;
 
 
+import com.alice.utils.CommonMetrics;
+import com.codahale.metrics.Timer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -25,7 +27,7 @@ public class LogPassService {
     public Optional<Long> getIDForUser(String login, String password) {
         Long userID;
         try {
-            jdbcTemplate.queryForObject("select id from logpass where log like ?", Long.class, login);
+            jdbcTemplate.queryForObject("select id from logpass where log = ?", Long.class, login);
         } catch (EmptyResultDataAccessException e) {
             userID = jdbcTemplate.queryForObject("select nextval('users_ids')", Long.class);
 
@@ -43,19 +45,25 @@ public class LogPassService {
      * Optional.empty otherwise
      */
     public Optional<Long> getUserID(String login, String password) {
-        String got_pass;
-        Long got_id;
-        try {
-            got_pass = jdbcTemplate.queryForObject("select pass from logpass where log like ?", String.class, login);
-            got_id = jdbcTemplate.queryForObject("select id from logpass where log like ?", Long.class, login);
-        } catch (EmptyResultDataAccessException e) {
-            return Optional.empty();
-        }
+        final Timer.Context context = CommonMetrics.getTimerContext(LogPassService.class,"getUserByLogPass-request");
 
-        if (!got_pass.equals(password)) {
-            return Optional.empty();
+        try {
+            String got_pass;
+            Long got_id;
+            try {
+                got_pass = jdbcTemplate.queryForObject("select pass from logpass where log = ?", String.class, login);
+                got_id = jdbcTemplate.queryForObject("select id from logpass where log = ?", Long.class, login);
+            } catch (EmptyResultDataAccessException e) {
+                return Optional.empty();
+            }
+
+            if (!got_pass.equals(password)) {
+                return Optional.empty();
+            }
+            return Optional.of(got_id);
+        } finally {
+            context.stop();
         }
-        return Optional.of(got_id);
     }
 
 }

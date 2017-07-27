@@ -14,11 +14,6 @@ import org.springframework.context.annotation.PropertySources;
 public class ClientApp {
 
     public static void main(String[] args) {
-
-//        new TestConcurrent(1).run();
-
-//        new com.test.TestCorrectness();
-
         SpringApplication.run(ClientApp.class, args);
     }
 

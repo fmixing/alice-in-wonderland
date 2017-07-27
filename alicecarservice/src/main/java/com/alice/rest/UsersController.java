@@ -6,6 +6,8 @@ import com.alice.services.UserService;
 import com.alice.utils.Result;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -27,8 +29,8 @@ public class UsersController {
 
     @RequestMapping("create_JSON")
     public String createJSON(Model model,
-                             @RequestParam(value="login", required=true) String login,
-                             @RequestParam(value="password", required=true) String password) {
+                             @RequestParam(value = "login", required = true) String login,
+                             @RequestParam(value = "password", required = true) String password) {
         Result<UserView> user;
 
         String error;
@@ -37,8 +39,7 @@ public class UsersController {
             user = userService.addUser(login, password);
             if (user.isPresent()) {
                 model.addAttribute("jsonUser", user.getResult());
-            }
-            else {
+            } else {
                 error = user.getMessage();
                 model.addAttribute("message", error);
             }
@@ -50,8 +51,34 @@ public class UsersController {
         return "jsonTemplate";
     }
 
+    @RequestMapping("get_user_id")
+    public String getUserID(
+            Model model,
+            @RequestParam(value = "login", required = true) String login,
+            @RequestParam(value = "password", required = true) String password) {
+
+        Optional<Long> ID;
+        String error;
+        try {
+            ID = logPassService.getUserID(login, password);
+            if (ID.isPresent()) {
+                model.addAttribute("jsonID", ID.get());
+            } else {
+                model.addAttribute("message", "User with this log pass doesn't exist");
+            }
+
+        } catch (Exception e) {
+            error = "Some problems with database occurred, please try again later";
+            model.addAttribute("message", error);
+        }
+
+        return "jsonTemplate";
+
+    }
+
+
     @RequestMapping("get_JSON")
-    public String getJSON(Model model, @RequestParam(value="id", required=true) Long id) {
+    public String getJSON(Model model, @RequestParam(value = "id", required = true) Long id) {
         Result<UserView> user;
 
         String error;
@@ -72,25 +99,10 @@ public class UsersController {
     }
 
     @RequestMapping("get_all_JSON")
-    public @ResponseBody Collection<UserView> getAllJSON(Model model) {
+    public @ResponseBody
+    Collection<UserView> getAllJSON(Model model) {
 
         return userService.getAllUsers();
-    }
-
-    @RequestMapping("get_user_id")
-    public @ResponseBody Optional<Long> getUserID(
-            Model model,
-            @RequestParam(value="login", required=true) String login,
-            @RequestParam(value="password", required=true) String password) {
-
-        Optional<Long> ID;
-        try {
-            ID = logPassService.getUserID(login, password);
-        } catch (Exception e) {
-            return Optional.empty();
-        }
-
-        return ID;
     }
 
 }

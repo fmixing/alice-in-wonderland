@@ -1,4 +1,4 @@
-package com.test.drive;
+package com.test.dbclasses;
 
 import javax.persistence.*;
 import java.io.Serializable;
@@ -26,6 +26,9 @@ public class Drive implements Serializable {
     @ManyToMany
     private Set<User> joinedUsers = new HashSet<>();
 
+    /**
+     * Hibernate needs this constructor
+     */
     public Drive() {}
 
 

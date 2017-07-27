@@ -1,9 +1,6 @@
-package com.test;
+package com.test.tests;
 
-import com.test.clientclasses.Drive;
-import com.test.clientclasses.ResultDrive;
-import com.test.clientclasses.ResultUser;
-import com.test.clientclasses.User;
+import com.test.clientclasses.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -11,11 +8,15 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class TestConcurrent {
 
 
     private static final Logger logger = LoggerFactory.getLogger(TestConcurrent.class);
+    private static final Logger loggerError = LoggerFactory.getLogger("TestError");
+
+    private List<Long> drivesIDs;
 
     private RestTemplate restTemplate = new RestTemplate();
 
@@ -30,6 +31,9 @@ public class TestConcurrent {
         for (int i = 0; i < count; i++) {
             clientThreads.add(new ClientThread("test" + (i + 1)));
         }
+
+        drivesIDs = Collections.synchronizedList(new ArrayList<>());
+        Objects.requireNonNull(drivesIDs);
     }
 
     public void run() {
@@ -62,36 +66,48 @@ public class TestConcurrent {
 
                 Random random = new Random();
 
-                int logRand = random.nextInt(2000);
+                int logRand = random.nextInt(1000);
                 String login = "a" + logRand;
 
-                ResultUser user = createUser(login);
+                ResultUser user;
+                while (true) {
+                    user = createUser(login);
 
-                if (user.hasMessage() && user.getMessage().equals("User with login " + login + " already exists")) {
+                    if (!(user.hasMessage() && user.getMessage().startsWith("Some problems with database occurred")))
+                        break;
+                }
+
+                if (user.hasMessage() && user.getMessage().startsWith("User with login")) {
                     Long userID = getUserID(login);
                     user = getUser(userID);
                 }
 
+                Objects.requireNonNull(user.getJsonUser().getUserID());
                 createDrive(user.getJsonUser().getUserID());
 
-                List<Drive> drives = getDrives();
+                Long driveIDJoin;
 
-                Drive driveJoin = drives.get(random.nextInt(drives.size()));
+                int rand = random.nextInt(drivesIDs.size());
 
-                joinDrive(user.getJsonUser().getUserID(), driveJoin.getDriveID());
+                driveIDJoin = drivesIDs.get(rand);
 
-                getDrive(driveJoin.getDriveID());
+                Objects.requireNonNull(driveIDJoin);
+
+                joinDrive(user.getJsonUser().getUserID(), driveIDJoin);
+
+                getDrive(driveIDJoin);
+
                 getUser(user.getJsonUser().getUserID());
-                getUsers();
+//                getUsers();
 
 
 //                int time = random.nextInt(5000);
-                int time = 3000;
-                try {
-                    sleep(time);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
+//                int time = 10;
+//                try {
+//                    sleep(time);
+//                } catch (InterruptedException e) {
+//                    e.printStackTrace();
+//                }
             }
         }
 
@@ -100,24 +116,26 @@ public class TestConcurrent {
          */
         private Long getUserID(String login) {
 
-            builder = UriComponentsBuilder.fromHttpUrl("http://localhost:8181/api/users/create_JSON")
+            builder = UriComponentsBuilder.fromHttpUrl("http://localhost:8181/api/users/get_user_id")
                     .queryParam("login", login)
                     .queryParam("password", "bbb");
 
-            ResponseEntity<Optional> responseEntity;
-
+            ResultID resultID;
             Long ID;
 
             while (true) {
                 try {
                     timeBefore = System.currentTimeMillis();
-                    responseEntity = restTemplate.getForEntity(builder.build().toString(), Optional.class);
-                    if (responseEntity.getBody().isPresent()) {
-                        ID = (Long) responseEntity.getBody().get();
+                    resultID = restTemplate.getForObject(builder.build().toString(), ResultID.class);
+                    if (resultID.hasResult()) {
+                        ID = resultID.getJsonID();
                         break;
                     }
+                    else {
+                        loggerError.error("Request: get user ID, got an error : '{}'", resultID.getMessage());
+                    }
                 } catch (Exception e) {
-                    logger.error("Request: get user ID, got an exception : '{}'", e.getMessage());
+                    loggerError.error("Request: get user ID, got an exception : '{}'", e.getMessage());
                 }
             }
 
@@ -142,7 +160,7 @@ public class TestConcurrent {
                     resultUser = restTemplate.getForObject(builder.build().toString(), ResultUser.class);
                     break;
                 } catch (Exception e) {
-                    logger.error("Request: create user, got an exception : '{}'", e.getMessage());
+                    loggerError.error("Request: create user, got an exception : '{}'", e.getMessage());
                 }
             }
 
@@ -171,7 +189,7 @@ public class TestConcurrent {
                     resultUser = restTemplate.getForObject(builder.build().toString(), ResultUser.class);
                     break;
                 } catch (Exception e) {
-                    logger.error("Request: get user, got an exception : '{}'", e.getMessage());
+                    loggerError.error("Request: get user, got an exception : '{}'", e.getMessage());
                 }
             }
 
@@ -200,7 +218,7 @@ public class TestConcurrent {
                     responseEntity = restTemplate.getForEntity(builder.build().toString(), User[].class);
                     break;
                 } catch (Exception e) {
-                    logger.error("Request: get all users, got an exception : '{}'", e.getMessage());
+                    loggerError.error("Request: get all users, got an exception : '{}'", e.getMessage());
                 }
             }
 
@@ -226,7 +244,7 @@ public class TestConcurrent {
                     resultDrive = restTemplate.getForObject(builder.build().toString(), ResultDrive.class);
                     break;
                 } catch (Exception e) {
-                    logger.error("Request: get drive, got an exception : '{}'", e.getMessage());
+                    loggerError.error("Request: get drive, got an exception : '{}'", e.getMessage());
                 }
             }
 
@@ -257,7 +275,7 @@ public class TestConcurrent {
                     resultDrive = restTemplate.getForObject(builder.build().toString(), ResultDrive.class);
                     break;
                 } catch (Exception e) {
-                    logger.error("Request: join drive, got an exception : '{}'", e.getMessage());
+                    loggerError.error("Request: join drive, got an exception : '{}'", e.getMessage());
                 }
             }
 
@@ -287,7 +305,7 @@ public class TestConcurrent {
                     responseEntity = restTemplate.getForEntity(builder.build().toString(), Drive[].class);
                     break;
                 } catch (Exception e) {
-                    logger.error("Request: get all drives, got an exception : '{}'", e.getMessage());
+                    loggerError.error("Request: get all drives, got an exception : '{}'", e.getMessage());
                 }
             }
 
@@ -324,7 +342,7 @@ public class TestConcurrent {
                     resultDrive = restTemplate.getForObject(builder.build().toString(), ResultDrive.class);
                     break;
                 } catch (Exception e) {
-                    logger.error("Request: create drive, got an exception : '{}'", e.getMessage());
+                    loggerError.error("Request: create drive, got an exception : '{}'", e.getMessage());
                 }
             }
 
@@ -336,6 +354,7 @@ public class TestConcurrent {
             } else {
                 logger.info("Request: create drive, got a drive : '{}', time spent on request = {}",
                         resultDrive.getJsonDrive(), (timeAfter - timeBefore));
+                drivesIDs.add(resultDrive.getJsonDrive().getDriveID());
             }
 
             return resultDrive;

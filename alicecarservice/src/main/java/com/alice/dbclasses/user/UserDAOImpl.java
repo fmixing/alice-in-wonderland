@@ -52,11 +52,14 @@ public class UserDAOImpl implements UserDAO {
     @Override
     public Optional<UserView> getUserByID(long ID)
     {
+        logger.error("Try to get read lock on userID {}", ID);
         usersLockCache.acquireReadLockOnKey(ID);
+        logger.error("Got read lock on userID {}", ID);
         try {
             return getUser(ID).map(value -> (UserView) org.apache.commons.lang3.SerializationUtils.clone(value));
         } finally {
             usersLockCache.releaseReadLockOnKey(ID);
+            logger.error("Released read lock on userID {}", ID);
         }
     }
 
@@ -83,7 +86,9 @@ public class UserDAOImpl implements UserDAO {
      */
     @Override
     public Optional<UserView> modify(long ID, Function<User, Optional<User>> mapper) {
+        logger.error("Try to get write lock on userID {}", ID);
         usersLockCache.acquireWriteLockOnKey(ID);
+        logger.error("Got write lock on userID {}", ID);
         return getUser(ID).flatMap(user -> {
             try {
                 return mapper.apply(user)
@@ -100,6 +105,7 @@ public class UserDAOImpl implements UserDAO {
             }
             finally {
                 usersLockCache.releaseWriteLockOnKey(ID);
+                logger.error("Released write lock on userID {}", ID);
             }
         });
     }
@@ -129,11 +135,14 @@ public class UserDAOImpl implements UserDAO {
      */
     @Override
     public void putToCache(User user) {
+        logger.error("Try to get read lock on userID {}", user.getUserID());
         usersLockCache.acquireReadLockOnKey(user.getUserID());
+        logger.error("Got read lock on userID {}", user.getUserID());
         try {
             selfPopulatingCache.putIfAbsent(new Element(user.getUserID(), user));
         } finally {
             usersLockCache.releaseReadLockOnKey(user.getUserID());
+            logger.error("Released read lock on userID {}", user.getUserID());
         }
     }
 

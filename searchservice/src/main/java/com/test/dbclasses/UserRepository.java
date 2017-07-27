@@ -1,4 +1,4 @@
-package com.test.drive;
+package com.test.dbclasses;
 
 import org.springframework.data.repository.CrudRepository;
 

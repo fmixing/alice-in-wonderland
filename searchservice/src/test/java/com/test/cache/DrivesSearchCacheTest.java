@@ -4,20 +4,18 @@ import com.googlecode.cqengine.ConcurrentIndexedCollection;
 import com.googlecode.cqengine.IndexedCollection;
 import com.googlecode.cqengine.attribute.Attribute;
 import com.googlecode.cqengine.attribute.SimpleAttribute;
-import com.googlecode.cqengine.persistence.onheap.OnHeapPersistence;
-import com.test.drive.Drive;
+import com.test.dbclasses.Drive;
 import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
 
 import static com.googlecode.cqengine.query.QueryFactory.attribute;
-import static org.junit.Assert.*;
 
 /**
  * Created by alice on 25.07.17.
  */
-public class CacheTest {
+public class DrivesSearchCacheTest {
     @Test
     public void name() throws Exception {
         final Attribute<Drive, Long> FROM = attribute("from", Drive::getFrom);

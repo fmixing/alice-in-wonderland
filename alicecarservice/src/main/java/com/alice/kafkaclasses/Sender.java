@@ -2,6 +2,9 @@ package com.alice.kafkaclasses;
 
 import com.alice.dbclasses.UpdateDB;
 import com.alice.kafka.KafkaTopics;
+import com.alice.services.UserService;
+import com.alice.utils.CommonMetrics;
+import com.codahale.metrics.Timer;
 import com.google.common.base.Throwables;
 import org.apache.kafka.clients.producer.*;
 import org.slf4j.Logger;
@@ -14,8 +17,7 @@ import org.springframework.stereotype.Component;
 import java.util.Properties;
 
 @Component
-public class
-Sender {
+public class Sender {
 
     private static final Logger logger = LoggerFactory.getLogger(Sender.class);
 
@@ -42,20 +44,26 @@ Sender {
     /**
      * Regularly sends updated drives to Kafka
      */
-    @Scheduled(fixedDelay = 4000)
+    @Scheduled(fixedDelay = 10)
     public void sendUpdates(){
+        final Timer.Context contextUpdateDrives = CommonMetrics.getTimerContext(Sender.class, "updateUpdatedDrives-request");
 
-        updateDB.sendUpdateDrives((id, drive) -> {
-            ProducerRecord<String, byte[]> record = new ProducerRecord<>(KafkaTopics.updateDrives, drive);
 
-            return producer.send(record, (metadata, e) -> {
-                if (e != null) {
-                    logger.error("Error occurred while sending drive update with id='{}' to topic='{}'", id, KafkaTopics.updateDrives);
-                    Throwables.propagate(e);
-                }
-                logger.info("drive update with id='{}' has been sent to topic='{}', the offset is {}", id, KafkaTopics.updateDrives, metadata.offset());
+        try {
+            updateDB.sendUpdateDrives((id, drive) -> {
+                ProducerRecord<String, byte[]> record = new ProducerRecord<>(KafkaTopics.updateDrives, drive);
+
+                return producer.send(record, (metadata, e) -> {
+                    if (e != null) {
+                        logger.error("Error occurred while sending drive update with id='{}' to topic='{}'", id, KafkaTopics.updateDrives);
+                        throw Throwables.propagate(e);
+                    }
+                    logger.info("drive update with id='{}' has been sent to topic='{}', the offset is {}", id, KafkaTopics.updateDrives, metadata.offset());
+                });
             });
-        });
+        } finally {
+            contextUpdateDrives.stop();
+        }
     }
 
 }

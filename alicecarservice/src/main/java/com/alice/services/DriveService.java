@@ -6,7 +6,9 @@ import com.alice.dbclasses.drive.DriveDAO;
 import com.alice.dbclasses.drive.DriveView;
 import com.alice.dbclasses.user.UserDAO;
 import com.alice.dbclasses.user.UserView;
+import com.alice.utils.CommonMetrics;
 import com.alice.utils.Result;
+import com.codahale.metrics.Timer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,22 +42,37 @@ public class DriveService {
      */
     public Result<DriveView> addDrive(long userID, long from, long to, long date, int vacantPlaces) {
 
-        Result<DriveView> res = new Result<>();
+        final Timer.Context context = CommonMetrics.getTimerContext(DriveService.class, "addDrive-request");
+        final Timer.Context contextAll = CommonMetrics.getTimerContext(UserService.class, "allOps-request");
 
-        Optional<UserView> userView = userDAO.modify(userID, user -> {
+        Result<DriveView> res;
+        try {
+            res = new Result<>();
 
             driveDAO.createDrive(userID, from, to, date, vacantPlaces, drive -> {
-                user.addPostedDrive(drive.getDriveID());
-                updateDB.updateUserDrive(user, drive);
-                driveDAO.putToCache(drive);
-                res.setResult(drive);
+                Optional<UserView> userView = userDAO.modify(userID, user -> {
+
+                    user.addPostedDrive(drive.getDriveID());
+                    final Timer.Context contextDB = CommonMetrics.getTimerContext(DriveService.class, "updateUserDrive-request");
+                    try {
+                        updateDB.updateUserDrive(user, drive);
+                    } finally {
+                        contextDB.stop();
+                    }
+                    driveDAO.putToCache(drive);
+                    res.setResult(drive);
+
+                    return Optional.of(user);
+                });
+
+                if (!userView.isPresent()) {
+                    res.setMessage("User with ID " + userID + " doesn't exist");
+
+                }
             });
-
-            return Optional.of(user);
-        });
-
-        if (!userView.isPresent()) {
-            res.setMessage("User with ID " + userID + " doesn't exist");
+        } finally {
+            context.stop();
+            contextAll.stop();
         }
 
         return res;
@@ -63,46 +80,59 @@ public class DriveService {
 
     /**
      * @param driveID a drive to which a user wants to join
-     * @param userID user ID
-     *
+     * @param userID  user ID
      * @return a {@code Result} object contains driveView to which the user joined,
      * error message if drive or user with this ID's doesn't exist
      */
     public Result<DriveView> joinDrive(long driveID, long userID) {
-        Result<DriveView> result = new Result<>();
-        Optional<DriveView> driveView = driveDAO.modify(driveID, drive -> {
-            Optional<UserView> userView = userDAO.modify(userID, user -> {
-                if (drive.getUserID() == userID) {
-                    result.setMessage("User can't join to a drive which they created");
+
+        final Timer.Context context = CommonMetrics.getTimerContext(DriveService.class, "joinDrive-request");
+        final Timer.Context contextAll = CommonMetrics.getTimerContext(UserService.class, "allOps-request");
+
+        try {
+            Result<DriveView> result = new Result<>();
+            Optional<DriveView> driveView = driveDAO.modify(driveID, drive -> {
+                Optional<UserView> userView = userDAO.modify(userID, user -> {
+                    if (drive.getUserID() == userID) {
+                        result.setMessage("User can't join to a drive which they created");
+                        return Optional.empty();
+                    }
+                    if (drive.getJoinedUsers().contains(userID)) {
+                        result.setMessage("You have already joined this drive");
+                        return Optional.empty();
+                    }
+                    if (!drive.addUser(userID)) {
+                        result.setMessage("Can't join to a drive with ID " + driveID + ", all seats are taken");
+                        return Optional.empty();
+                    }
+                    user.addJoinedDrive(driveID);
+
+                    final Timer.Context contextDB = CommonMetrics.getTimerContext(DriveService.class, "updateUserDrive-request");
+                    try {
+                        updateDB.updateUserDrive(user, drive);
+                    } finally {
+                        contextDB.stop();
+                    }
+
+                    result.setResult(drive);
+
+                    driveDAO.putToCache(drive);
+
+                    return Optional.of(user);
+                });
+                if (!userView.isPresent()) {
+                    result.setMessage("User with ID " + userID + " doesn't exist");
                     return Optional.empty();
                 }
-                if (drive.getJoinedUsers().contains(userID)) {
-                    result.setMessage("You have already joined this drive");
-                    return Optional.empty();
-                }
-                if (!drive.addUser(userID)) {
-                    result.setMessage("Can't join to a drive with ID " + driveID + ", all seats are taken");
-                    return Optional.empty();
-                }
-                user.addJoinedDrive(driveID);
-
-                updateDB.updateUserDrive(user, drive);
-
-                result.setResult(drive);
-
-                driveDAO.putToCache(drive);
-
-                return Optional.of(user);
+                return Optional.of(drive);
             });
-            if (!userView.isPresent()) {
-                result.setMessage("User with ID " + userID + " doesn't exist");
-                return Optional.empty();
-            }
-            return Optional.of(drive);
-        });
-        if (!driveView.isPresent())
-            result.setMessage("Drive with ID " + driveID + " doesn't exist");
-        return result;
+            if (!driveView.isPresent())
+                result.setMessage("Drive with ID " + driveID + " doesn't exist");
+            return result;
+        } finally {
+            context.stop();
+            contextAll.stop();
+        }
     }
 
     /**
@@ -111,21 +141,36 @@ public class DriveService {
      * error message if a drive with this ID doesn't exist
      */
     public Result<DriveView> getDrive(long ID) {
-        Result<DriveView> result = new Result<>();
-        Optional<DriveView> drive = driveDAO.getDriveByID(ID);
+        final Timer.Context context = CommonMetrics.getTimerContext(DriveService.class, "getDrive-request");
+        final Timer.Context contextAll = CommonMetrics.getTimerContext(UserService.class, "allOps-request");
 
-        if (!drive.isPresent()) {
-            result.setMessage("Drive with ID " + ID + " doesn't exist");
+        try {
+            Result<DriveView> result = new Result<>();
+            Optional<DriveView> drive = driveDAO.getDriveByID(ID);
+
+            if (!drive.isPresent()) {
+                result.setMessage("Drive with ID " + ID + " doesn't exist");
+                return result;
+            }
+            result.setResult(drive.get());
             return result;
+        } finally {
+            context.stop();
+            contextAll.stop();
         }
-        result.setResult(drive.get());
-        return result;
     }
 
     /**
      * @return all the created drives
      */
     public Collection<DriveView> getAllDrives() {
-        return driveDAO.getDrives();
+
+        final Timer.Context context = CommonMetrics.getTimerContext(DriveService.class, "getAllDrives-request");
+
+        try {
+            return driveDAO.getDrives();
+        } finally {
+            context.stop();
+        }
     }
 }

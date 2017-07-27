@@ -10,8 +10,8 @@ import com.googlecode.cqengine.query.Query;
 import static com.googlecode.cqengine.query.QueryFactory.*;
 
 import com.googlecode.cqengine.resultset.ResultSet;
-import com.test.drive.Drive;
-import com.test.drive.DriveRepository;
+import com.test.dbclasses.Drive;
+import com.test.dbclasses.DriveRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -27,7 +27,7 @@ import java.util.stream.Collectors;
 import static com.googlecode.cqengine.stream.StreamFactory.streamOf;
 
 @Component
-public class Cache {
+public class DrivesSearchCache {
 
     /**
      * Amount of days contained in cache starting the current day
@@ -43,11 +43,11 @@ public class Cache {
 
     private final IndexedCollection<Drive> drivesCache = new ConcurrentIndexedCollection<>(OnHeapPersistence.onPrimaryKey(ID));
 
-    private long dateFrom;
-    private long dateTo;
+    private volatile long dateFrom;
+    private volatile long dateTo;
 
     @Autowired
-    public Cache(DriveRepository repository) {
+    public DrivesSearchCache(DriveRepository repository) {
         this.repository = repository;
 
         long delay = getMidnightDate(1).getTime() - System.currentTimeMillis();

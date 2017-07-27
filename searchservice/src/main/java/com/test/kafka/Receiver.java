@@ -1,5 +1,10 @@
 package com.test.kafka;
 
+import com.alice.utils.CommonMetrics;
+import com.codahale.metrics.*;
+import com.codahale.metrics.Timer;
+import com.google.common.base.Throwables;
+import com.test.SearchService;
 import com.test.db.UpdateDB;
 import com.alice.kafka.KafkaTopics;
 import org.apache.commons.lang3.SerializationUtils;
@@ -44,7 +49,7 @@ public class Receiver {
      * The timeout to Kafka's consumer poll method
      */
     @Value("${consumer.poll.timeout}")
-    private long pollTimeout = 1000;
+    private long pollTimeout = 10;
 
     @Autowired
     public Receiver(Environment environment, UpdateDB updateDB) {
@@ -78,20 +83,31 @@ public class Receiver {
         public void run() {
             while (!Thread.currentThread().isInterrupted()) {
                 try {
-                    ConsumerRecords<String, byte[]> records = consumer.poll(pollTimeout);
+                    final Timer.Context contextPoll = CommonMetrics.getTimerContext(Receiver.class,"pollDrives");
+                    ConsumerRecords<String, byte[]> records;
+                    try {
+                        records = consumer.poll(pollTimeout);
+                    } finally {
+                        contextPoll.stop();
+                    }
+
+                    logger.info("Drives update has been received, size = {}", records.count());
 
                     List<com.alice.dbclasses.drive.Drive> drives = new ArrayList<>();
 
                     for (ConsumerRecord record : records) {
                         com.alice.dbclasses.drive.Drive drive = SerializationUtils.deserialize((byte[]) record.value());
 
-                        logger.info("drive='{}' with topic='{}' and offset='{}' has been received", drive.getDriveID(),
-                                record.topic(), record.offset());
-
                         if (drives.size() < transactionSize) {
                             drives.add(drive);
                         } else {
-                            updateDB.updateDrives(drives);
+                            final Timer.Context contextUpdate = CommonMetrics.getTimerContext(Receiver.class,"updateDrivesUsers");
+
+                            try {
+                                updateDB.updateDrives(drives);
+                            } finally {
+                                contextUpdate.stop();
+                            }
 
                             Long committedOffset = getCommittedOffset();
                             consumer.commitSync(Collections.singletonMap(drivesTopicPartition,

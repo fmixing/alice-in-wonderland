@@ -1,4 +1,4 @@
-package com.test.drive;
+package com.test.dbclasses;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -25,6 +25,9 @@ public class User {
         this.id = id;
     }
 
+    /**
+     * Hibernate needs this constructor
+     */
     public User() {
     }
 

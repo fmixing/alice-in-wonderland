@@ -1,10 +1,10 @@
 package com.test.db;
 
-import com.test.cache.Cache;
-import com.test.drive.Drive;
-import com.test.drive.DriveRepository;
-import com.test.drive.User;
-import com.test.drive.UserRepository;
+import com.test.cache.DrivesSearchCache;
+import com.test.dbclasses.Drive;
+import com.test.dbclasses.DriveRepository;
+import com.test.dbclasses.User;
+import com.test.dbclasses.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,7 +27,7 @@ public class UpdateDB {
      * Contains drive which dates are in time interval [{@code Cache.fromDate}, {@code Cache.toDate}]
      */
     @Autowired
-    private Cache cache;
+    private DrivesSearchCache drivesSearchCache;
 
     /**
      * Saves all users which are joined to drives in users table, saves all drives in drives table as a transaction
@@ -43,7 +43,7 @@ public class UpdateDB {
 
         driveRepository.save(dbDrives);
 
-        cache.addDrives(dbDrives.stream().
+        drivesSearchCache.addDrives(dbDrives.stream().
                 filter(this::isInInterval).
                 collect(Collectors.toList()));
     }
@@ -52,7 +52,7 @@ public class UpdateDB {
      * Checks if drive can be put in cache
      */
     private boolean isInInterval(Drive drive) {
-        return cache.getDateFrom() <= drive.getDate() &&  drive.getDate() <= cache.getDateTo();
+        return drivesSearchCache.getDateFrom() <= drive.getDate() &&  drive.getDate() <= drivesSearchCache.getDateTo();
     }
 
     /**

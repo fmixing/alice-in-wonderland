@@ -52,18 +52,26 @@ public class DriveDAOImpl implements DriveDAO {
     public DriveView createDrive(long userID, long from, long to, long date, int vacantPlaces, Consumer<Drive> mapper) {
         Long driveID = jdbcTemplate.queryForObject("select nextval('drives_ids')", Long.class);
 
-        Drive drive = new Drive(driveID, userID, from, to, date, vacantPlaces);
-
+        logger.error("Try to get write lock on driveID {}", driveID);
+        drivesLockCache.acquireWriteLockOnKey(driveID);
+        logger.error("Got write lock on driveID {}", driveID);
         try {
-            mapper.accept(drive);
-        }
-        catch (Exception e)
-        {
-            logger.error("Failed to access database while creating drive with ID {} and user ID {}", driveID, userID);
-            throw Throwables.propagate(e);
-        }
+            Drive drive = new Drive(driveID, userID, from, to, date, vacantPlaces);
 
-        return drive;
+            try {
+                mapper.accept(drive);
+            }
+            catch (Exception e)
+            {
+                logger.error("Failed to access database while creating drive with ID {} and user ID {}", driveID, userID);
+                throw Throwables.propagate(e);
+            }
+
+            return drive;
+        } finally {
+            drivesLockCache.releaseWriteLockOnKey(driveID);
+            logger.error("Released write lock on driveID {}", driveID);
+        }
     }
 
     /**
@@ -74,11 +82,15 @@ public class DriveDAOImpl implements DriveDAO {
     @Override
     public Optional<DriveView> getDriveByID(long ID)
     {
+        logger.error("Try to get read lock on driveID {}", ID);
         drivesLockCache.acquireReadLockOnKey(ID);
+        logger.error("Got read lock on driveID {}", ID);
+
         try {
             return getDrive(ID).map(value -> (DriveView) org.apache.commons.lang3.SerializationUtils.clone(value));
         } finally {
             drivesLockCache.releaseReadLockOnKey(ID);
+            logger.error("Released read lock on driveID {}", ID);
         }
     }
 
@@ -107,7 +119,9 @@ public class DriveDAOImpl implements DriveDAO {
      */
     @Override
     public Optional<DriveView> modify(long ID, Function<Drive, Optional<Drive>> mapper) {
+        logger.error("Try to get write lock on driveID {}", ID);
         drivesLockCache.acquireWriteLockOnKey(ID);
+        logger.error("Got write lock on driveID {}", ID);
         return getDrive(ID).flatMap(drive -> {
             try {
                 return mapper.apply(drive)
@@ -124,6 +138,7 @@ public class DriveDAOImpl implements DriveDAO {
             }
             finally {
                 drivesLockCache.releaseWriteLockOnKey(ID);
+                logger.error("Released write lock on driveID {}", ID);
             }
         });
     }
@@ -133,12 +148,7 @@ public class DriveDAOImpl implements DriveDAO {
      */
     @Override
     public void putToCache(Drive drive) {
-        drivesLockCache.acquireReadLockOnKey(drive.getDriveID());
-        try {
-            selfPopulatingCache.putIfAbsent(new Element(drive.getDriveID(), drive));
-        } finally {
-            drivesLockCache.releaseReadLockOnKey(drive.getDriveID());
-        }
+        selfPopulatingCache.putIfAbsent(new Element(drive.getDriveID(), drive));
     }
 
 

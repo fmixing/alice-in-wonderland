@@ -1,4 +1,4 @@
-package com.test;
+package com.test.tests;
 
 import com.test.clientclasses.Drive;
 import com.test.clientclasses.ResultDrive;
