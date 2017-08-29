@@ -73,7 +73,6 @@ public class SearchService {
         }
     }
 
-
     /**
      * Gets the time interval to search in database
      * @return Optional object contains time interval that should be checked in database,

@@ -32,7 +32,7 @@ public class Receiver {
     /**
      * The amount of drives that should be processed as a transaction
      */
-    private static final int transactionSize = 100;
+    private static final int transactionSize = 1000;
 
     /**
      * Kafka's consumer properties
@@ -49,7 +49,7 @@ public class Receiver {
      * The timeout to Kafka's consumer poll method
      */
     @Value("${consumer.poll.timeout}")
-    private long pollTimeout = 10;
+    private long pollTimeout = 200;
 
     @Autowired
     public Receiver(Environment environment, UpdateDB updateDB) {
@@ -60,6 +60,9 @@ public class Receiver {
         props.put("enable.auto.commit", environment.getProperty("consumer.enable.auto.commit"));
         props.put("key.deserializer", environment.getProperty("consumer.key.deserializer"));
         props.put("value.deserializer", environment.getProperty("consumer.value.deserializer"));
+        props.put("max.poll.records", environment.getProperty("consumer.max.poll.records"));
+        props.put("fetch.max.bytes", environment.getProperty("consumer.fetch.max.bytes"));
+        props.put("max.partition.fetch.bytes", environment.getProperty("consumer.max.partition.fetch.bytes"));
         consumer = new KafkaConsumer<>(props);
         consumer.subscribe(Collections.singletonList(KafkaTopics.updateDrives));
 

@@ -73,3 +73,8 @@ telegram.properties
 *.iml
 .idea/*
 */target/*
+.idea/
+api/target/
+bot/target/
+logs/
+searchservice/target/

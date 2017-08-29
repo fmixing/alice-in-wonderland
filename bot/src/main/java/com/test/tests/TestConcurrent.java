@@ -8,7 +8,6 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 
 public class TestConcurrent {
 
@@ -66,7 +65,7 @@ public class TestConcurrent {
 
                 Random random = new Random();
 
-                int logRand = random.nextInt(1000);
+                int logRand = randBetween(15000, 16000);
                 String login = "a" + logRand;
 
                 ResultUser user;
@@ -98,16 +97,14 @@ public class TestConcurrent {
                 getDrive(driveIDJoin);
 
                 getUser(user.getJsonUser().getUserID());
-//                getUsers();
 
 
-//                int time = random.nextInt(5000);
-//                int time = 10;
-//                try {
-//                    sleep(time);
-//                } catch (InterruptedException e) {
-//                    e.printStackTrace();
-//                }
+                int time = 5;
+                try {
+                    sleep(time);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
             }
         }
 
